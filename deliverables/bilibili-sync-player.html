@@ -161,6 +161,7 @@
     background:#3c4a5e;transform:translateX(-50%);border-radius:2px;
   }
   .mark.done{background:rgba(224,164,90,.55);}
+  .mark.ad{background:#e07a5a;box-shadow:0 0 0 2px rgba(224,122,90,.3);}
   .tl-row{
     display:flex;align-items:center;gap:10px;flex-wrap:wrap;
     padding:6px 0 10px;font-size:12.5px;color:var(--txt-faint);
@@ -253,6 +254,13 @@
     letter-spacing:.2px;
   }
   .c-sub{font-size:13.5px;color:var(--txt-dim);margin:0 0 18px;padding-left:11px;border-left:2px solid var(--line);}
+  .c-summary{
+    font-size:14.5px;line-height:1.85;color:var(--txt-dim);
+    margin:0 0 18px;padding:14px 16px;border-radius:11px;
+    background:#121821;border:1px solid var(--line-soft);
+  }
+  .c-kind{font-size:11.5px;padding:2px 9px;border-radius:999px;margin-left:auto;color:var(--txt-faint);}
+  .c-kind.ad{color:var(--warn);border:1px solid rgba(224,122,90,.4);background:rgba(224,122,90,.12);}
   .c-quote{
     margin:0 0 18px;padding:12px 14px;border-radius:10px;
     background:rgba(127,178,255,.07);border:1px solid rgba(127,178,255,.16);
@@ -383,7 +391,7 @@
         <div class="tl-row">
           <span class="tl-time"><b id="tCur">00:00</b> / <span id="tDur">20:14</span></span>
           <span class="sep">|</span>
-          <span>第 <b id="tCh">1</b>/<span id="tChAll">8</span> 段</span>
+          <span>第 <b id="tCh">1</b>/<span id="tChAll">18</span> 观点</span>
           <span class="sep">|</span>
           <span id="tState">已暂停</span>
         </div>
@@ -394,8 +402,8 @@
         <button class="btn" id="btnBack5">« 5s</button>
         <button class="btn" id="btnFwd5">5s »</button>
         <div class="ctl-sep"></div>
-        <button class="btn" id="btnPrev">上一段</button>
-        <button class="btn" id="btnNext">下一段</button>
+        <button class="btn" id="btnPrev">上一观点</button>
+        <button class="btn" id="btnNext">下一观点</button>
         <div class="ctl-sep"></div>
         <button class="btn" id="btnAlign">对齐时间</button>
         <select class="btn" id="selRate" title="倍速（需与播放器内倍速保持一致）">
@@ -424,7 +432,7 @@
 
     <div class="card rail" style="margin-top:14px">
       <div class="rail-head">
-        <span>章节 · 点击跳转 · 「打点」把当前时间设为该段起点</span>
+        <span>观点 · 点击跳转 · 「打点」把当前时间设为该观点起点</span>
         <span class="acts">
           <button class="btn ghost" id="btnExport" style="padding:3px 9px;font-size:11.5px">导出</button>
           <button class="btn ghost" id="btnImport" style="padding:3px 9px;font-size:11.5px">导入</button>
@@ -440,17 +448,16 @@
   <aside class="stage">
     <div class="card content">
       <div class="c-top">
-        <span class="c-index" id="cIndex">段落 01</span>
-        <span class="c-range" id="cRange">00:00 – 02:55</span>
+        <span class="c-index" id="cIndex">观点 01</span>
+        <span class="c-range" id="cRange">00:00 – 00:56</span>
+        <span class="c-kind" id="cKind"></span>
       </div>
       <div class="c-bar"><i id="cBar" style="width:0%"></i></div>
       <h2 class="c-title" id="cTitle">—</h2>
-      <p class="c-sub" id="cSub"></p>
-      <div class="c-quote" id="cQuote" style="display:none"></div>
-      <ul class="points" id="cPoints"></ul>
+      <div class="c-summary" id="cSummary"></div>
       <div class="tags" id="cTags"></div>
       <div class="c-next">
-        <span>下一段：<b id="cNextName">—</b></span>
+        <span>下一个观点：<b id="cNextName">—</b></span>
         <span class="cnt" id="cNextIn">—</span>
       </div>
     </div>
@@ -458,7 +465,7 @@
 </main>
 
 <div class="foot">
-  <b>快捷键（焦点在页面空白处时）</b>：空格 = 播放/暂停 · ← → = ±5 秒 · ↑ ↓ = 上/下一段 · <code>C</code> = 对齐时间 · <code>1..8</code> = 直跳第 N 段<br>
+  <b>快捷键（焦点在页面空白处时）</b>：空格 = 播放/暂停 · ← → = ±5 秒 · ↑ ↓ = 上/下一个观点 · <code>C</code> = 对齐时间 · <code>1..9</code> = 直跳第 N 个观点（更多见左侧列表）<br>
   <b>关于同步精度</b>：B 站官方 iframe 播放器不向外部页面回传播放进度（跨域限制，无可用接口），因此本页采用「本地时钟 + 重载定位」方案：
   开启「重载定位」后，播放/暂停/跳转都会用 <code>&amp;t=秒数</code> 重新加载播放器，时间点精确不漂移，代价是约 1–2 秒缓冲；
   若你在播放器内部自行拖动/暂停，点「对齐时间」或按 <code>C</code> 输入播放器上的时间即可纠偏。
@@ -491,106 +498,46 @@
      1. 内容数据：改这里就能换整页内容
      结构：{ t: 起始秒, title, sub, quote:{text,from}, points:[...], tags:[...] }
      ======================================================= */
+  /* 观点数据：由语音转写 + 语义切分得到（共 18 个观点，无插入广告）。
+     结构：{ t: 起始秒, end: 结束秒, ad: 是否广告段, title, summary }
+     说明：summary 为该观点的完整摘要，取代原「段落·要点」式辅助阅读。 */
   const DEFAULT_CHAPTERS = [
-    {
-      t: 0,
-      title: '开场｜一个几乎所有人都搞反的常识',
-      sub: '我们天天喊的「蒋介石」，喊的其实是他的「字」。',
-      points: [
-        '名与字的规矩：名以正体，字以表德。名用于自称和长辈称呼，字用于平辈与外人的尊称。',
-        '蒋介石——名中正，字介石。今天最常见的误解，就是把他的名和字弄反了。',
-        '所以严格讲：「蒋中正」才是他的名，「蒋介石」只是他的字。'
-      ],
-      tags: ['名与字', '称呼', '常识纠正']
-    },
-    {
-      t: 175,
-      title: '溪口盐商之子的第一个名字',
-      sub: '1887 年生于浙江奉化溪口，他一生用过的名字远不止两个。',
-      points: [
-        '1887 年（清光绪十三年）生于浙江奉化溪口，父亲蒋肇聪经营盐铺。',
-        '幼名「瑞元」，族谱上的谱名「周泰」，读书后取的学名「志清」。',
-        '早年的名字一直在换，这正是他后来反复改名、取字的社会背景——清末民初，改名是常态。'
-      ],
-      tags: ['奉化溪口', '瑞元', '周泰', '志清']
-    },
-    {
-      t: 360,
-      title: '《易经·豫卦》：名与字的共同出处',
-      sub: '「中正」和「介石」不是两件事，它们出自同一句爻辞。',
-      quote: {
-        text: '六二：介于石，不终日，贞吉。《象》曰：不终日贞吉，以中正也。',
-        from: '《周易·豫卦》'
-      },
-      points: [
-        '豫卦六二爻辞：「介于石，不终日，贞吉。」——这是「介石」二字的来源。',
-        '同一爻的《象传》：「不终日，贞吉，以中正也。」——这是「中正」二字的来源。',
-        '名与字互相发明、彼此呼应，这在传统取名法里叫「名字相应」，是极标准的范例。',
-        '注：出自《易经》这一点为各家所公认，具体取义的解读则历来有细微出入。'
-      ],
-      tags: ['周易', '豫卦', '名字相应']
-    },
-    {
-      t: 570,
-      title: '让「介石」出圈的，是东京的一份杂志',
-      sub: '名与字虽同出一句，但走红的先后完全不同。',
-      points: [
-        '1908 年赴日，入振武学校，同年由陈其美介绍加入同盟会。',
-        '1912 年前后，他在东京创办《军声》杂志，署名即用「介石」，这个名字在革命同志间先行流传。',
-        '孙中山书信中多以「介石兄」相称，同辈革命党人也习惯叫「介石」。',
-        '而「中正」更多出现在他后来投身军政之后的公文、委任状与题词落款之中。'
-      ],
-      tags: ['军声杂志', '同盟会', '孙中山', '振武学校']
-    },
-    {
-      t: 780,
-      title: '为什么正式场合与台湾都写「蒋中正」',
-      sub: '户籍、公文、选票，用的都是本名。',
-      points: [
-        '户籍、公文、委任状、选票这类正式文书，一律使用本名「中正」。',
-        '他本人题词落款也写「蒋中正」，于是有了「总统蒋中正」的官方称谓。',
-        '由此衍生出一系列以「中正」命名的地标与机构，如中正纪念堂。',
-        '称「蒋中正」，等于承认其官方身份与法统；这也正是这个称呼带着政治重量的原因。'
-      ],
-      tags: ['蒋中正', '法统', '正式称谓']
-    },
-    {
-      t: 960,
-      title: '大陆为什么坚持叫「蒋介石」',
-      sub: '三条线索：沿用社会通称、中共文献的定调、以及去法统化。',
-      points: [
-        '其一：沿用民国报刊与社会上的通称——当时民间最普遍的叫法本来就是「介石」。',
-        '其二：中共文献从抗战时期到新华社电讯，一律使用「蒋介石」，由此形成固定指称并沿用下来。',
-        '其三：称「字」而不称「名」，也在无形中回避了「蒋中正」所携带的官方与法统色彩。',
-        '补充：战时民间另有「蒋该死」一类谐音讥讽，属情绪化的绰号，并非正式称谓。'
-      ],
-      tags: ['话语习惯', '新华社', '去法统化']
-    },
-    {
-      t: 1100,
-      title: '全世界都跟着叫「字」：Chiang Kai-shek',
-      sub: '英文名里藏着的，同样是「介石」，不是「中正」。',
-      points: [
-        'Chiang Kai-shek 中的 Kai-shek，拼写的是「介石」二字（经粤语/早期官话转写），而不是「中正」的 Chung-cheng。',
-        '抗战时期盟军与西方媒体沿用了这一叫法，使其成为世界通用称谓。',
-        '结果形成三种叫法并存：台湾用其「名」，大陆用其「字」，西方世界用的也是「字」。'
-      ],
-      tags: ['Chiang Kai-shek', '威妥玛拼音', '国际称谓']
-    },
-    {
-      t: 1180,
-      title: '结语｜称呼背后是叙事之争',
-      sub: '记住一句口诀，就不会再叫错。',
-      quote: {
-        text: '中正为名，介石为字；自称用名，外人称字。',
-        from: '记住这一句就够了'
-      },
-      points: [
-        '名与字的分野原本只是礼俗，落到近代政治人物身上，就成了立场与法统的表态。',
-        '一个称呼沿用几十年，背后是一整套叙事之争——叫「蒋中正」还是「蒋介石」，从来不只是语文问题。'
-      ],
-      tags: ['总结', '口诀']
-    }
+    { t:0.0,    end:56.9,   ad:false, title:'引子：2008年“常凯申”误译风波',
+      summary:'某高校学者把英文著作里的人名 Chiang Kai-shek 按粤语韦氏拼音直译作“常凯申”，闹出笑话，顺带点出“介石”是粤语发音的转写。' },
+    { t:56.9,   end:79.0,   ad:false, title:'抛出核心问题：介石是字、中正是名，大陆为何偏叫“蒋介石”',
+      summary:'点出疑惑——教科书与主旋律剧里反复出现的“蒋介石”三字究竟怎么来的？台湾满街“中正路”“中正纪念堂”里的蒋中正，和我们要打倒的是否同一人？' },
+    { t:79.0,   end:117.8,  ad:false, title:'背景①：传统“名”与“字”的定义',
+      summary:'古人至少挂两个称呼：名（出生三月由父母取，长辈/上级可称、自谦可用）与字（男子二十行冠礼后取，平辈朋友同僚一律称字）。' },
+    { t:117.8,  end:176.6,  ad:false, title:'背景②：古人例证——称字是尊重，直呼名是冒犯',
+      summary:'诸葛亮/孔明、刘备/玄德，叫字是常礼，直呼其名近乎骂人；杜甫因醉酒直呼严武父亲的大名，险些被严武杀掉，载于两《唐书》。' },
+    { t:176.6,  end:208.0,  ad:false, title:'背景③：名近乎隐私与避讳文化',
+      summary:'名除父母师长皇帝外旁人碰不得；民间连皇帝圣人也要避讳，因李世民讳“世”字，观世音被硬改成“观音”，文化惯性极强。' },
+    { t:208.0,  end:261.3,  ad:false, title:'背景④：这套规矩延续到民国，国民党内部互称字',
+      summary:'科举废、帝制亡，军阀政客仍按旧礼：冯玉祥称焕章、阎锡山称百川、张学良称汉卿；蒋介石本人所有正式场合署名都是“蒋中正”，从不写“蒋介石”。' },
+    { t:261.3,  end:340.0,  ad:false, title:'揭示：蒋介石本名不是中正，青年时代叫“蒋志清”',
+      summary:'按谱名蒋周泰、小名瑞元；16岁取学名蒋志清，陪他念完私塾、保定军校、东京，连拜黄金荣的帖子都落“蒋志清”，孙中山也称他“志清”。' },
+    { t:340.0,  end:364.0,  ad:false, title:'日本留学取笔名“介石”',
+      summary:'在东京办军事评论杂志《军声》，写文章用笔名“介石”，取“其介如石”之意（意志坚如磐石），杂志旋停刊，笔名却被保留下来。' },
+    { t:364.0,  end:456.0,  ad:false, title:'关键转折：1917–18年从《易经》自改名——介石(字)·中正(名)',
+      summary:'30岁上下从《易经》豫卦“利建侯行师”与既济卦“介于石……贞吉”摘出“介石”为字、“中正”为名；名与字出自同句、互为表里。改名正值事业受挫、纵情声色之时，更多是自我约束的“军令状”。' },
+    { t:456.0,  end:629.0,  ad:false, title:'为何大众最熟悉“蒋介石”：以字行的社会惯性',
+      summary:'民国仍“称人以字、自称以名”：孙中山称“介石兄”、黄埔将领称“介公”、报纸顺用“蒋介石”，使用频次远超“蒋中正”；史称“以字行”（唐寅/伯虎、王守仁/阳明、刘伯承/明昭等均如此）。' },
+    { t:629.0,  end:699.0,  ad:false, title:'海外路径：Chiang Kai-shek 的全球化传播',
+      summary:'该英文名诞生于广州国民政府时期，按粤语韦氏拼音转写（孙中山=Sun Yat-sen同逻辑），随二战史传遍全球，连大陆官方译名都难绕开；“常凯申”笑话反证其根深蒂固。Kai Shek=介石，非中正。' },
+    { t:699.0,  end:721.5,  ad:false, title:'三重力量叠加，成就“蒋介石”的认知霸权',
+      summary:'一重晚清民国称字习惯（文化土壤）、二重 Chiang Kai-shek 全球化（外部加固）、三重数十年时间惯性（自然沉淀，无人刻意操盘）。' },
+    { t:721.5,  end:835.8,  ad:false, title:'1949后大陆保留“蒋介石”：政治切割与意识形态避讳',
+      summary:'1949后两岸称呼出现裂缝：台湾官方民间一律“蒋中正”，大陆叙述口径全用“蒋介石”。“中正”已被他打造成个人政治品牌（中正剑、中正大学、中正路、中正纪念堂），大陆避开此名是近乎本能的避讳。' },
+    { t:835.8,  end:943.0,  ad:false, title:'中共话语中的称呼：避用“中正”成禁区，称字反成尊称的讽刺',
+      summary:'即便抗战合作期毛称“蒋先生/蒋委员长”，《毛选》里最高频仍是“蒋介石”而非“蒋中正”；“中正”在中共话语里近乎禁区。反讽：按传统礼俗称字本为尊重，大陆最常用的称呼在礼法坐标上反高一等。' },
+    { t:943.0,  end:983.3,  ad:false, title:'尼克松访华轶事：连骂人都避开“中正”',
+      summary:'1972年尼克松问毛如何称呼蒋，周恩来幽默答“一般叫蒋帮，有时也叫匪”；妙在即便互骂也是“蒋匪帮”而非“中正匪帮”，连骂人都舍不得用“中正”。' },
+    { t:983.3,  end:1077.4, ad:false, title:'“字”在大陆消失与两千年文化线索的断裂',
+      summary:'1949后“字”随跪拜礼被归入封建糟粕，户口只留“姓名”一栏；香港身份证仍标“字某”。两千年名/字并行体系在几十年内从集体记忆蒸发，年轻人看古装剧要靠字幕认角色。' },
+    { t:1077.4, end:1186.0, ad:false, title:'刘文典轶事：为一个称呼差点入狱',
+      summary:'1928年安徽大学校长刘文典（章太炎弟子）被蒋介石直呼其名“刘文典”，当场回怼“名是父母长辈教的，不是阿猫阿狗能叫的”，两人吵翻，刘被关押，经蔡元培等斡旋才脱险——称名称字在彼时界定尊卑亲疏。' },
+    { t:1186.0, end:1213.0, ad:false, title:'收尾点题：叫“介石”非因尊重，而是他配不上“中正”',
+      summary:'十三亿大陆人叫他字“介石”，绝非尊崇——是觉得他实在不配“中正”二字；兼安徽江淮方言“介石”有“脾气差”之意，结尾以方言梗收束并致谢。' }
   ];
 
   const BV = 'BV1mQuC6fEFz';
@@ -619,7 +566,11 @@
       const raw = localStorage.getItem(LS_KEY);
       if(raw){
         const d = JSON.parse(raw);
-        if(Array.isArray(d.chapters) && d.chapters.length) return d.chapters;
+        // 仅接受「观点」格式（含 t + summary）；旧版「段落」格式自动回退默认
+        if(Array.isArray(d.chapters) && d.chapters.length &&
+           d.chapters.every(c => typeof c.t === 'number' && typeof c.summary === 'string')){
+          return d.chapters;
+        }
       }
     }catch(e){}
     return JSON.parse(JSON.stringify(DEFAULT_CHAPTERS));
@@ -640,8 +591,8 @@
   const track = $('track'), fill = $('fill'), knob = $('knob');
   const el = {
     tCur:$('tCur'), tDur:$('tDur'), tCh:$('tCh'), tChAll:$('tChAll'), tState:$('tState'),
-    cIndex:$('cIndex'), cRange:$('cRange'), cBar:$('cBar'), cTitle:$('cTitle'), cSub:$('cSub'),
-    cQuote:$('cQuote'), cPoints:$('cPoints'), cTags:$('cTags'),
+    cIndex:$('cIndex'), cRange:$('cRange'), cBar:$('cBar'), cTitle:$('cTitle'),
+    cSummary:$('cSummary'), cKind:$('cKind'), cTags:$('cTags'),
     cNextName:$('cNextName'), cNextIn:$('cNextIn'),
     chList:$('chList'), btnPlay:$('btnPlay'), syncBadge:$('syncBadge'), modeBadge:$('modeBadge'),
     durLabel:$('durLabel'), toast:$('toast'), mTime:$('mTime')
@@ -775,7 +726,7 @@
   /* =======================================================
      7. 渲染
      ======================================================= */
-  let lastIdx = -1, lastPt = -1, lastSec = -1;
+  let lastIdx = -1, lastSec = -1;
 
   function render(force){
     const i = chapterIndexAt(S.t);
@@ -804,40 +755,29 @@
       el.syncBadge.className = S.playing ? 'badge live' : 'badge';
     }
 
-    /* --- 主内容 --- */
+    /* --- 主内容：观点 --- */
     if(i !== lastIdx || force){
       lastIdx = i;
-      el.cIndex.textContent = '段落 ' + String(i+1).padStart(2,'0');
+      el.cIndex.textContent = '观点 ' + String(i+1).padStart(2,'0');
       el.cTitle.textContent = ch.title;
-      el.cSub.textContent = ch.sub || '';
-      if(ch.quote){
-        el.cQuote.style.display = '';
-        el.cQuote.innerHTML = '「' + ch.quote.text + '」<small>—— ' + (ch.quote.from||'') + '</small>';
+      el.cSummary.textContent = ch.summary || '';
+      if(ch.ad){
+        el.cKind.textContent = '广告段';
+        el.cKind.className = 'c-kind ad';
       }else{
-        el.cQuote.style.display = 'none';
+        el.cKind.textContent = '';
+        el.cKind.className = 'c-kind';
       }
-      el.cPoints.innerHTML = ch.points.map((p,k)=>
-        '<li data-k="'+k+'"><span class="pi">'+(k+1)+'</span><span>'+p+'</span></li>'
-      ).join('');
-      el.cTags.innerHTML = (ch.tags||[]).map(t=>'<span class="tag">'+t+'</span>').join('');
+      el.cTags.innerHTML = '';
       el.tCh.textContent = i+1;
-      // 章节列表高亮
+      // 观点列表高亮
       Array.prototype.forEach.call(el.chList.children, (node,k)=>{
         node.classList.toggle('active', k === i);
         node.classList.toggle('done', k < i);
       });
     }
 
-    /* --- 要点逐条点亮 --- */
-    const pts = ch.points.length;
-    const active = clamp(Math.floor(ratio * pts), 0, pts-1);
-    if(active !== lastPt || force){
-      lastPt = active;
-      Array.prototype.forEach.call(el.cPoints.children, (node,k)=>{
-        node.classList.toggle('active', k === active);
-        node.classList.toggle('done', k < active);
-      });
-    }
+    /* --- 观点为整体摘要，无需逐条点亮 --- */
   }
 
   /* 章节时间刻度线 */
@@ -846,9 +786,9 @@
     S.chapters.forEach((c,k)=>{
       if(k === 0) return;
       const m = document.createElement('div');
-      m.className = 'mark';
+      m.className = 'mark' + (c.ad ? ' ad' : '');
       m.style.left = (c.t / S.dur * 100) + '%';
-      m.title = fmt(c.t) + ' · ' + c.title;
+      m.title = fmt(c.t) + ' · ' + (c.ad ? '【广告】' : '') + c.title;
       track.appendChild(m);
     });
   }
@@ -921,8 +861,9 @@
     if(mk){
       const k = +mk.getAttribute('data-mark');
       S.chapters[k].t = Math.round(S.t);
+      if(k > 0) S.chapters[k-1].end = S.chapters[k].t;
       buildRail(); buildMarks(); render(true); save();
-      toast('已把 ' + fmt(S.chapters[k].t) + ' 设为第 ' + (k+1) + ' 段起点');
+      toast('已把 ' + fmt(S.chapters[k].t) + ' 设为第 ' + (k+1) + ' 个观点起点');
       return;
     }
     const item = e.target.closest('.ch-item');
