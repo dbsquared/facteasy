@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>视频同步阅读器 · 蒋介石为何被称为「蒋介石」</title>
+<style>
+  :root{
+    --bg:#0b0e13;
+    --bg-soft:#11161f;
+    --panel:#151b25;
+    --panel-2:#1a222e;
+    --line:#252d3a;
+    --line-soft:#1e2632;
+    --txt:#e7edf5;
+    --txt-dim:#9aa7b8;
+    --txt-faint:#66748a;
+    --accent:#e0a45a;
+    --accent-soft:rgba(224,164,90,.14);
+    --accent-2:#7fb2ff;
+    --ok:#4ec9a0;
+    --warn:#e07a5a;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(224,164,90,.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(127,178,255,.06), transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:15px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent-2);text-decoration:none;}
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    padding:14px 22px;
+    border-bottom:1px solid var(--line-soft);
+    background:rgba(11,14,19,.75);
+    backdrop-filter:blur(8px);
+    position:sticky;top:0;z-index:50;
+  }
+  .tb-title{font-size:16px;font-weight:650;letter-spacing:.2px;}
+  .tb-meta{font-size:12.5px;color:var(--txt-faint);}
+  .tb-spacer{flex:1;}
+  .badge{
+    font-size:11.5px;padding:4px 10px;border-radius:999px;
+    border:1px solid var(--line);background:var(--panel);color:var(--txt-dim);
+    white-space:nowrap;
+  }
+  .badge.live{color:var(--accent);border-color:rgba(224,164,90,.35);background:var(--accent-soft);}
+  .badge.exact{color:var(--ok);border-color:rgba(78,201,160,.35);background:rgba(78,201,160,.12);}
+
+  /* ---------- 布局 ---------- */
+  .layout{
+    display:grid;
+    grid-template-columns:minmax(0,1.1fr) minmax(370px,.9fr);
+    gap:20px;
+    padding:20px 22px 40px;
+    max-width:1560px;margin:0 auto;
+    align-items:start;
+  }
+  @media (max-width:1060px){
+    .layout{grid-template-columns:1fr;}
+  }
+
+  .card{
+    background:linear-gradient(180deg,var(--panel) 0%,var(--bg-soft) 100%);
+    border:1px solid var(--line-soft);
+    border-radius:var(--radius);
+  }
+
+  /* ---------- 播放器 ---------- */
+  .player-card{padding:12px;}
+  .video-box{
+    position:relative;width:100%;aspect-ratio:16/9;
+    background:#000;border-radius:10px;overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .video-box iframe,.video-box video{
+    position:absolute;inset:0;width:100%;height:100%;border:0;display:block;
+  }
+  .veil{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;
+    background:linear-gradient(180deg,rgba(8,11,16,.82),rgba(8,11,16,.92));
+    cursor:pointer;z-index:5;transition:opacity .25s;
+  }
+  .veil.hide{opacity:0;pointer-events:none;}
+  .veil-btn{
+    width:74px;height:74px;border-radius:50%;
+    background:linear-gradient(140deg,var(--accent),#c8843c);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 10px 34px rgba(224,164,90,.34);
+    transition:transform .18s;
+  }
+  .veil:hover .veil-btn{transform:scale(1.07);}
+  .veil-btn svg{margin-left:4px;}
+  .veil-txt{font-size:14px;color:var(--txt);letter-spacing:.5px;}
+  .veil-sub{font-size:12px;color:var(--txt-faint);margin-top:-6px;}
+  .buffering{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    z-index:6;display:none;align-items:center;gap:8px;
+    padding:8px 14px;border-radius:999px;
+    background:rgba(8,11,16,.9);border:1px solid var(--line);
+    font-size:12.5px;color:var(--txt-dim);
+  }
+  .buffering.on{display:flex;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
+
+  /* 无视频计时面板 */
+  .manual{
+    position:absolute;inset:0;z-index:4;display:none;
+    flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    background:linear-gradient(180deg,#12171f,#0b0e13);
+  }
+  .manual.on{display:flex;}
+  .manual .m-cap{font-size:12px;color:var(--txt-faint);letter-spacing:1px;}
+  .manual .m-time{
+    font-size:52px;font-weight:600;line-height:1.1;
+    font-variant-numeric:tabular-nums;color:var(--accent);
+    text-shadow:0 0 34px rgba(224,164,90,.28);
+  }
+  .manual .m-sub{font-size:12.5px;color:var(--txt-faint);text-align:center;padding:0 20px;}
+
+  /* 播放器被拦截时的提示条 */
+  .embed-tip{
+    display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+    padding:11px 12px 4px;margin-top:8px;
+    border-top:1px solid var(--line-soft);
+    font-size:12.5px;color:var(--txt-faint);
+  }
+  .embed-tip b{color:var(--txt-dim);font-weight:600;}
+  .embed-tip .btn{padding:4px 10px;font-size:12px;}
+
+  /* ---------- 时间轴 ---------- */
+  .tl{padding:14px 12px 4px;}
+  .track{
+    position:relative;height:26px;cursor:pointer;
+    display:flex;align-items:center;
+  }
+  .track-rail{position:absolute;left:0;right:0;height:6px;border-radius:99px;background:#202836;}
+  .track-fill{position:absolute;left:0;height:6px;border-radius:99px;background:linear-gradient(90deg,#c8843c,var(--accent));}
+  .track-knob{
+    position:absolute;width:14px;height:14px;border-radius:50%;
+    background:var(--accent);border:2px solid #0b0e13;
+    box-shadow:0 0 0 3px rgba(224,164,90,.22);
+    transform:translateX(-50%);transition:box-shadow .2s;
+  }
+  .track:hover .track-knob{box-shadow:0 0 0 5px rgba(224,164,90,.28);}
+  .mark{
+    position:absolute;width:2px;height:14px;
+    background:#3c4a5e;transform:translateX(-50%);border-radius:2px;
+  }
+  .mark.done{background:rgba(224,164,90,.55);}
+  .tl-row{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:6px 0 10px;font-size:12.5px;color:var(--txt-faint);
+  }
+  .tl-time{font-variant-numeric:tabular-nums;color:var(--txt);font-size:13px;}
+  .tl-time b{color:var(--accent);font-weight:600;}
+  .tl-row .sep{color:var(--line);}
+
+  /* ---------- 控制条 ---------- */
+  .controls{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:6px 12px 12px;
+  }
+  button.btn{
+    font:inherit;font-size:13px;
+    color:var(--txt);background:var(--panel-2);
+    border:1px solid var(--line);border-radius:9px;
+    padding:7px 13px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;
+    transition:background .15s,border-color .15s,color .15s;
+    white-space:nowrap;
+  }
+  button.btn:hover{background:#212b39;border-color:#33405480;}
+  button.btn:active{transform:translateY(1px);}
+  button.btn.primary{
+    background:linear-gradient(140deg,var(--accent),#c8843c);
+    color:#1b1206;font-weight:650;border-color:transparent;
+    min-width:96px;justify-content:center;
+  }
+  button.btn.primary:hover{filter:brightness(1.07);}
+  button.btn.ghost{background:transparent;color:var(--txt-dim);}
+  button.btn.ghost:hover{color:var(--txt);}
+  button.btn.on{border-color:rgba(224,164,90,.5);color:var(--accent);background:var(--accent-soft);}
+  select.btn{padding:7px 9px;}
+  .ctl-sep{width:1px;height:20px;background:var(--line);margin:0 2px;}
+  .switch{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12.5px;color:var(--txt-dim);cursor:pointer;user-select:none;
+  }
+  .switch input{accent-color:var(--accent);}
+
+  /* ---------- 章节列表 ---------- */
+  .rail{padding:14px 6px 10px;}
+  .rail-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 10px 10px;font-size:12px;color:var(--txt-faint);
+    letter-spacing:.4px;
+  }
+  .rail-head .acts{display:flex;gap:6px;}
+  .ch-item{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 10px;border-radius:9px;cursor:pointer;
+    transition:background .15s;
+  }
+  .ch-item:hover{background:#1a222e;}
+  .ch-item.active{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent);}
+  .ch-num{
+    flex:0 0 22px;height:22px;border-radius:6px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;color:var(--txt-faint);background:#1e2632;
+    font-variant-numeric:tabular-nums;
+  }
+  .ch-item.active .ch-num{background:var(--accent);color:#1b1206;font-weight:700;}
+  .ch-item.done .ch-num{background:rgba(224,164,90,.28);color:var(--accent);}
+  .ch-name{flex:1;font-size:13.5px;color:var(--txt-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ch-item.active .ch-name{color:var(--txt);font-weight:600;}
+  .ch-item.done .ch-name{color:#8d9aab;}
+  .ch-t{font-size:11.5px;color:var(--txt-faint);font-variant-numeric:tabular-nums;}
+  .ch-mark{
+    font-size:11px;padding:2px 7px;border-radius:6px;
+    border:1px solid var(--line);color:var(--txt-faint);
+    background:transparent;cursor:pointer;
+  }
+  .ch-mark:hover{color:var(--accent);border-color:rgba(224,164,90,.5);}
+  .ch-item.active .ch-mark{color:var(--accent);border-color:rgba(224,164,90,.45);}
+
+  /* ---------- 右侧内容 ---------- */
+  .stage{position:sticky;top:78px;}
+  .content{padding:22px 24px 24px;min-height:520px;display:flex;flex-direction:column;}
+  .c-top{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--txt-faint);}
+  .c-index{
+    padding:2px 9px;border-radius:6px;background:var(--accent-soft);
+    color:var(--accent);font-weight:650;letter-spacing:.5px;
+  }
+  .c-range{font-variant-numeric:tabular-nums;}
+  .c-bar{height:3px;border-radius:99px;background:#202836;margin:12px 0 16px;overflow:hidden;}
+  .c-bar i{display:block;height:100%;background:linear-gradient(90deg,#c8843c,var(--accent));border-radius:99px;transition:width .3s;}
+  .c-title{
+    font-size:23px;line-height:1.35;font-weight:680;margin:0 0 8px;
+    letter-spacing:.2px;
+  }
+  .c-sub{font-size:13.5px;color:var(--txt-dim);margin:0 0 18px;padding-left:11px;border-left:2px solid var(--line);}
+  .c-quote{
+    margin:0 0 18px;padding:12px 14px;border-radius:10px;
+    background:rgba(127,178,255,.07);border:1px solid rgba(127,178,255,.16);
+    font-size:14px;color:#cfe0f7;
+  }
+  .c-quote small{display:block;margin-top:6px;color:var(--txt-faint);font-size:12px;}
+  .points{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
+  .points li{
+    display:flex;gap:11px;padding:12px 14px;border-radius:10px;
+    background:#141a24;border:1px solid var(--line-soft);
+    font-size:14px;color:var(--txt-faint);
+    transition:background .3s,color .3s,border-color .3s,transform .3s,opacity .3s;
+    opacity:.5;
+  }
+  .points li .pi{
+    flex:0 0 20px;height:20px;border-radius:5px;margin-top:2px;
+    background:#1e2632;color:var(--txt-faint);
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-variant-numeric:tabular-nums;
+  }
+  .points li.done{opacity:.72;color:var(--txt-dim);}
+  .points li.done .pi{background:rgba(224,164,90,.18);color:var(--accent);}
+  .points li.active{
+    opacity:1;color:var(--txt);
+    background:linear-gradient(100deg,rgba(224,164,90,.13),rgba(224,164,90,.04));
+    border-color:rgba(224,164,90,.34);
+    transform:translateX(3px);
+    box-shadow:0 4px 18px rgba(0,0,0,.25);
+  }
+  .points li.active .pi{background:var(--accent);color:#1b1206;font-weight:700;}
+  .tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:20px;}
+  .tag{
+    font-size:11.5px;padding:3px 10px;border-radius:999px;
+    background:#1a222e;border:1px solid var(--line);color:var(--txt-dim);
+  }
+  .c-next{
+    margin-top:auto;padding-top:20px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    font-size:12.5px;color:var(--txt-faint);
+    border-top:1px solid var(--line-soft);
+  }
+  .c-next b{color:var(--txt-dim);font-weight:600;}
+  .c-next .cnt{font-variant-numeric:tabular-nums;color:var(--accent);}
+
+  /* ---------- 弹窗 ---------- */
+  .mask{
+    position:fixed;inset:0;background:rgba(5,7,11,.72);
+    display:none;align-items:center;justify-content:center;z-index:100;
+    backdrop-filter:blur(3px);
+  }
+  .mask.on{display:flex;}
+  .modal{
+    width:min(440px,92vw);background:var(--panel);
+    border:1px solid var(--line);border-radius:14px;padding:22px;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);
+  }
+  .modal h3{margin:0 0 6px;font-size:16px;}
+  .modal p{margin:0 0 16px;font-size:13px;color:var(--txt-dim);}
+  .modal input[type=text]{
+    width:100%;font:inherit;font-size:16px;padding:10px 12px;
+    background:#0e131b;border:1px solid var(--line);border-radius:9px;
+    color:var(--txt);outline:none;font-variant-numeric:tabular-nums;
+  }
+  .modal input[type=text]:focus{border-color:rgba(224,164,90,.6);}
+  .modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+  .hint{font-size:12px;color:var(--txt-faint);margin-top:10px;}
+  .toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(14px);
+    background:var(--panel);border:1px solid var(--line);
+    padding:10px 18px;border-radius:999px;font-size:13px;color:var(--txt);
+    opacity:0;transition:opacity .25s,transform .25s;z-index:200;pointer-events:none;
+    box-shadow:0 10px 34px rgba(0,0,0,.4);
+  }
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+  .foot{
+    max-width:1560px;margin:0 auto;padding:0 22px 34px;
+    font-size:12px;color:var(--txt-faint);line-height:1.8;
+  }
+  .foot code{
+    background:#171e28;padding:1px 6px;border-radius:5px;
+    font-size:11.5px;color:var(--txt-dim);
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div>
+    <div class="tb-title">蒋介石明明是名中正字介石，为何大陆会普遍称他蒋介石？</div>
+    <div class="tb-meta">UP 主：山河有声 · 合集《清及近现代史》 · 总时长 <span id="durLabel">20:14</span></div>
+  </div>
+  <div class="tb-spacer"></div>
+  <span class="badge" id="modeBadge">B 站在线 · 估算同步</span>
+  <span class="badge" id="syncBadge">未开始</span>
+</header>
+
+<main class="layout">
+  <!-- ============ 左：视频 + 控制 ============ -->
+  <section>
+    <div class="card player-card">
+      <div class="video-box" id="videoBox">
+        <iframe id="biliFrame"
+          src="https://player.bilibili.com/player.html?bvid=BV1mQuC6fEFz&cid=40830764747&p=1&high_quality=1&danmaku=0&autoplay=0&t=0"
+          scrolling="no" frameborder="0"
+          allow="autoplay; fullscreen; encrypted-media"
+          allowfullscreen="true" title="B站播放器"></iframe>
+        <div class="manual" id="manualPanel">
+          <div class="m-cap">无视频计时模式</div>
+          <div class="m-time" id="mTime">00:00</div>
+          <div class="m-sub">请在别处（B 站标签页 / 播放器）播放视频，这里只负责计时，右侧内容照常跟着走。</div>
+        </div>
+        <div class="buffering" id="bufTip"><span class="dot"></span>定位中…</div>
+        <div class="veil" id="veil">
+          <div class="veil-btn">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="#1b1206"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          <div class="veil-txt">开始同步播放</div>
+          <div class="veil-sub">点击后自动定位并起播，右侧内容随进度切换</div>
+        </div>
+      </div>
+
+      <div class="tl">
+        <div class="track" id="track">
+          <div class="track-rail"></div>
+          <div class="track-fill" id="fill"></div>
+          <div class="track-knob" id="knob"></div>
+        </div>
+        <div class="tl-row">
+          <span class="tl-time"><b id="tCur">00:00</b> / <span id="tDur">20:14</span></span>
+          <span class="sep">|</span>
+          <span>第 <b id="tCh">1</b>/<span id="tChAll">8</span> 段</span>
+          <span class="sep">|</span>
+          <span id="tState">已暂停</span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="btnPlay">▶ 播放</button>
+        <button class="btn" id="btnBack5">« 5s</button>
+        <button class="btn" id="btnFwd5">5s »</button>
+        <div class="ctl-sep"></div>
+        <button class="btn" id="btnPrev">上一段</button>
+        <button class="btn" id="btnNext">下一段</button>
+        <div class="ctl-sep"></div>
+        <button class="btn" id="btnAlign">对齐时间</button>
+        <select class="btn" id="selRate" title="倍速（需与播放器内倍速保持一致）">
+          <option value="0.75">0.75×</option>
+          <option value="1" selected>1.0×</option>
+          <option value="1.25">1.25×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2.0×</option>
+        </select>
+        <div class="ctl-sep"></div>
+        <label class="switch" title="开启时，播放/暂停/跳转会通过重载播放器精确定位；关闭则只移动右侧内容，需你自己在播放器里操作">
+          <input type="checkbox" id="chkReload" checked> 重载定位
+        </label>
+        <button class="btn ghost" id="btnLocal">本地视频（精确）</button>
+        <button class="btn ghost" id="btnManual">无视频计时</button>
+        <input type="file" id="fileLocal" accept="video/*" style="display:none">
+      </div>
+
+      <div class="embed-tip" id="embedTip">
+        <span>播放器是空白或显示「<b>content is blocked</b>」？那是当前预览环境拦了外部 iframe，不是页面坏了 ——</span>
+        <button class="btn ghost" id="btnOpenTab">在新标签页打开（接着当前时间）</button>
+        <button class="btn ghost" id="btnManual2">改用无视频计时</button>
+        <button class="btn ghost" id="btnHideTip">隐藏</button>
+      </div>
+    </div>
+
+    <div class="card rail" style="margin-top:14px">
+      <div class="rail-head">
+        <span>章节 · 点击跳转 · 「打点」把当前时间设为该段起点</span>
+        <span class="acts">
+          <button class="btn ghost" id="btnExport" style="padding:3px 9px;font-size:11.5px">导出</button>
+          <button class="btn ghost" id="btnImport" style="padding:3px 9px;font-size:11.5px">导入</button>
+          <button class="btn ghost" id="btnReset" style="padding:3px 9px;font-size:11.5px">重置</button>
+          <input type="file" id="fileImport" accept=".json,application/json" style="display:none">
+        </span>
+      </div>
+      <div id="chList"></div>
+    </div>
+  </section>
+
+  <!-- ============ 右：随进度变化的内容 ============ -->
+  <aside class="stage">
+    <div class="card content">
+      <div class="c-top">
+        <span class="c-index" id="cIndex">段落 01</span>
+        <span class="c-range" id="cRange">00:00 – 02:55</span>
+      </div>
+      <div class="c-bar"><i id="cBar" style="width:0%"></i></div>
+      <h2 class="c-title" id="cTitle">—</h2>
+      <p class="c-sub" id="cSub"></p>
+      <div class="c-quote" id="cQuote" style="display:none"></div>
+      <ul class="points" id="cPoints"></ul>
+      <div class="tags" id="cTags"></div>
+      <div class="c-next">
+        <span>下一段：<b id="cNextName">—</b></span>
+        <span class="cnt" id="cNextIn">—</span>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="foot">
+  <b>快捷键（焦点在页面空白处时）</b>：空格 = 播放/暂停 · ← → = ±5 秒 · ↑ ↓ = 上/下一段 · <code>C</code> = 对齐时间 · <code>1..8</code> = 直跳第 N 段<br>
+  <b>关于同步精度</b>：B 站官方 iframe 播放器不向外部页面回传播放进度（跨域限制，无可用接口），因此本页采用「本地时钟 + 重载定位」方案：
+  开启「重载定位」后，播放/暂停/跳转都会用 <code>&amp;t=秒数</code> 重新加载播放器，时间点精确不漂移，代价是约 1–2 秒缓冲；
+  若你在播放器内部自行拖动/暂停，点「对齐时间」或按 <code>C</code> 输入播放器上的时间即可纠偏。
+  如需逐帧精确同步，点「本地视频（精确）」载入本地 <code>.mp4</code>，将切换为原生播放器，进度 100% 精确。<br>
+  <b>播放器区域显示「This content is blocked」怎么办？</b>某些预览面板 / 沙箱 / 内网环境会拦截外部 iframe（B 站本身并未限制嵌入，其响应头不含 <code>X-Frame-Options</code> 与 CSP <code>frame-ancestors</code>）。
+  此时可点「在新标签页打开（接着当前时间）」，或切到「无视频计时」——右侧内容照样按时间线切换。
+</div>
+
+<!-- 对齐弹窗 -->
+<div class="mask" id="mask">
+  <div class="modal">
+    <h3>对齐播放时间</h3>
+    <p>看一眼播放器进度条上的时间，填进来（mm:ss 或 hh:mm:ss）。右侧内容会立刻跳到对应位置。</p>
+    <input type="text" id="alignInput" placeholder="例如 07:35" autocomplete="off">
+    <div class="row">
+      <button class="btn ghost" id="alignCancel">取消</button>
+      <button class="btn primary" id="alignOk" style="min-width:80px">对齐</button>
+    </div>
+    <div class="hint">当前本地时间：<span id="alignNow">00:00</span> · 小技巧：先暂停视频再对齐，最准。</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* =======================================================
+     1. 内容数据：改这里就能换整页内容
+     结构：{ t: 起始秒, title, sub, quote:{text,from}, points:[...], tags:[...] }
+     ======================================================= */
+  const DEFAULT_CHAPTERS = [
+    {
+      t: 0,
+      title: '开场｜一个几乎所有人都搞反的常识',
+      sub: '我们天天喊的「蒋介石」，喊的其实是他的「字」。',
+      points: [
+        '名与字的规矩：名以正体，字以表德。名用于自称和长辈称呼，字用于平辈与外人的尊称。',
+        '蒋介石——名中正，字介石。今天最常见的误解，就是把他的名和字弄反了。',
+        '所以严格讲：「蒋中正」才是他的名，「蒋介石」只是他的字。'
+      ],
+      tags: ['名与字', '称呼', '常识纠正']
+    },
+    {
+      t: 175,
+      title: '溪口盐商之子的第一个名字',
+      sub: '1887 年生于浙江奉化溪口，他一生用过的名字远不止两个。',
+      points: [
+        '1887 年（清光绪十三年）生于浙江奉化溪口，父亲蒋肇聪经营盐铺。',
+        '幼名「瑞元」，族谱上的谱名「周泰」，读书后取的学名「志清」。',
+        '早年的名字一直在换，这正是他后来反复改名、取字的社会背景——清末民初，改名是常态。'
+      ],
+      tags: ['奉化溪口', '瑞元', '周泰', '志清']
+    },
+    {
+      t: 360,
+      title: '《易经·豫卦》：名与字的共同出处',
+      sub: '「中正」和「介石」不是两件事，它们出自同一句爻辞。',
+      quote: {
+        text: '六二：介于石，不终日，贞吉。《象》曰：不终日贞吉，以中正也。',
+        from: '《周易·豫卦》'
+      },
+      points: [
+        '豫卦六二爻辞：「介于石，不终日，贞吉。」——这是「介石」二字的来源。',
+        '同一爻的《象传》：「不终日，贞吉，以中正也。」——这是「中正」二字的来源。',
+        '名与字互相发明、彼此呼应，这在传统取名法里叫「名字相应」，是极标准的范例。',
+        '注：出自《易经》这一点为各家所公认，具体取义的解读则历来有细微出入。'
+      ],
+      tags: ['周易', '豫卦', '名字相应']
+    },
+    {
+      t: 570,
+      title: '让「介石」出圈的，是东京的一份杂志',
+      sub: '名与字虽同出一句，但走红的先后完全不同。',
+      points: [
+        '1908 年赴日，入振武学校，同年由陈其美介绍加入同盟会。',
+        '1912 年前后，他在东京创办《军声》杂志，署名即用「介石」，这个名字在革命同志间先行流传。',
+        '孙中山书信中多以「介石兄」相称，同辈革命党人也习惯叫「介石」。',
+        '而「中正」更多出现在他后来投身军政之后的公文、委任状与题词落款之中。'
+      ],
+      tags: ['军声杂志', '同盟会', '孙中山', '振武学校']
+    },
+    {
+      t: 780,
+      title: '为什么正式场合与台湾都写「蒋中正」',
+      sub: '户籍、公文、选票，用的都是本名。',
+      points: [
+        '户籍、公文、委任状、选票这类正式文书，一律使用本名「中正」。',
+        '他本人题词落款也写「蒋中正」，于是有了「总统蒋中正」的官方称谓。',
+        '由此衍生出一系列以「中正」命名的地标与机构，如中正纪念堂。',
+        '称「蒋中正」，等于承认其官方身份与法统；这也正是这个称呼带着政治重量的原因。'
+      ],
+      tags: ['蒋中正', '法统', '正式称谓']
+    },
+    {
+      t: 960,
+      title: '大陆为什么坚持叫「蒋介石」',
+      sub: '三条线索：沿用社会通称、中共文献的定调、以及去法统化。',
+      points: [
+        '其一：沿用民国报刊与社会上的通称——当时民间最普遍的叫法本来就是「介石」。',
+        '其二：中共文献从抗战时期到新华社电讯，一律使用「蒋介石」，由此形成固定指称并沿用下来。',
+        '其三：称「字」而不称「名」，也在无形中回避了「蒋中正」所携带的官方与法统色彩。',
+        '补充：战时民间另有「蒋该死」一类谐音讥讽，属情绪化的绰号，并非正式称谓。'
+      ],
+      tags: ['话语习惯', '新华社', '去法统化']
+    },
+    {
+      t: 1100,
+      title: '全世界都跟着叫「字」：Chiang Kai-shek',
+      sub: '英文名里藏着的，同样是「介石」，不是「中正」。',
+      points: [
+        'Chiang Kai-shek 中的 Kai-shek，拼写的是「介石」二字（经粤语/早期官话转写），而不是「中正」的 Chung-cheng。',
+        '抗战时期盟军与西方媒体沿用了这一叫法，使其成为世界通用称谓。',
+        '结果形成三种叫法并存：台湾用其「名」，大陆用其「字」，西方世界用的也是「字」。'
+      ],
+      tags: ['Chiang Kai-shek', '威妥玛拼音', '国际称谓']
+    },
+    {
+      t: 1180,
+      title: '结语｜称呼背后是叙事之争',
+      sub: '记住一句口诀，就不会再叫错。',
+      quote: {
+        text: '中正为名，介石为字；自称用名，外人称字。',
+        from: '记住这一句就够了'
+      },
+      points: [
+        '名与字的分野原本只是礼俗，落到近代政治人物身上，就成了立场与法统的表态。',
+        '一个称呼沿用几十年，背后是一整套叙事之争——叫「蒋中正」还是「蒋介石」，从来不只是语文问题。'
+      ],
+      tags: ['总结', '口诀']
+    }
+  ];
+
+  const BV = 'BV1mQuC6fEFz';
+  const CID = '40830764747';
+  const FRAME_BASE = 'https://player.bilibili.com/player.html?bvid=' + BV +
+                     '&cid=' + CID + '&p=1&high_quality=1&danmaku=0';
+  const LS_KEY = 'bilisync:' + BV;
+  const DEFAULT_DUR = 1214; // 20:14
+
+  /* =======================================================
+     2. 状态
+     ======================================================= */
+  const S = {
+    t: 0,
+    dur: DEFAULT_DUR,
+    playing: false,
+    rate: 1,
+    mode: 'iframe',   // 'iframe' | 'local'
+    reload: true,
+    lastFrame: 0,
+    chapters: loadChapters()
+  };
+
+  function loadChapters(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(raw){
+        const d = JSON.parse(raw);
+        if(Array.isArray(d.chapters) && d.chapters.length) return d.chapters;
+      }
+    }catch(e){}
+    return JSON.parse(JSON.stringify(DEFAULT_CHAPTERS));
+  }
+  function save(){
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        chapters: S.chapters, t: S.t, rate: S.rate
+      }));
+    }catch(e){}
+  }
+
+  /* =======================================================
+     3. DOM
+     ======================================================= */
+  const $ = id => document.getElementById(id);
+  const frame = $('biliFrame'), veil = $('veil'), bufTip = $('bufTip'), box = $('videoBox');
+  const track = $('track'), fill = $('fill'), knob = $('knob');
+  const el = {
+    tCur:$('tCur'), tDur:$('tDur'), tCh:$('tCh'), tChAll:$('tChAll'), tState:$('tState'),
+    cIndex:$('cIndex'), cRange:$('cRange'), cBar:$('cBar'), cTitle:$('cTitle'), cSub:$('cSub'),
+    cQuote:$('cQuote'), cPoints:$('cPoints'), cTags:$('cTags'),
+    cNextName:$('cNextName'), cNextIn:$('cNextIn'),
+    chList:$('chList'), btnPlay:$('btnPlay'), syncBadge:$('syncBadge'), modeBadge:$('modeBadge'),
+    durLabel:$('durLabel'), toast:$('toast'), mTime:$('mTime')
+  };
+
+  /* =======================================================
+     4. 工具
+     ======================================================= */
+  function fmt(s){
+    s = Math.max(0, Math.round(s));
+    const h = Math.floor(s/3600), m = Math.floor(s%3600/60), sec = s%60;
+    const p = n => String(n).padStart(2,'0');
+    return (h ? h + ':' + p(m) : p(m)) + ':' + p(sec);
+  }
+  function parseTime(str){
+    if(!str) return null;
+    str = String(str).trim().replace(/：/g,':');
+    const parts = str.split(':').map(Number);
+    if(parts.some(isNaN)) return null;
+    let s = 0;
+    if(parts.length === 1) s = parts[0];
+    else if(parts.length === 2) s = parts[0]*60 + parts[1];
+    else if(parts.length === 3) s = parts[0]*3600 + parts[1]*60 + parts[2];
+    else return null;
+    return isFinite(s) ? s : null;
+  }
+  function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+  let toastTimer;
+  function toast(msg){
+    el.toast.textContent = msg;
+    el.toast.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>el.toast.classList.remove('on'), 2200);
+  }
+  function chapterIndexAt(t){
+    let i = 0;
+    for(let k=0;k<S.chapters.length;k++) if(t >= S.chapters[k].t) i = k;
+    return i;
+  }
+  function chapterEnd(i){
+    return (i+1 < S.chapters.length) ? S.chapters[i+1].t : S.dur;
+  }
+
+  /* =======================================================
+     5. 播放器驱动
+     ======================================================= */
+  let bufTimer;
+  function loadFrame(t, autoplay){
+    const url = FRAME_BASE + '&autoplay=' + (autoplay?1:0) + '&t=' + Math.floor(t);
+    if(frame.src !== url){
+      frame.src = url;
+      bufTip.classList.add('on');
+      clearTimeout(bufTimer);
+      bufTimer = setTimeout(()=>bufTip.classList.remove('on'), 1600);
+    }
+  }
+  function seek(t, opts){
+    opts = opts || {};
+    S.t = clamp(t, 0, S.dur);
+    if(S.mode === 'local' && localVideo){
+      try{ localVideo.currentTime = S.t; }catch(e){}
+    }else if(S.mode === 'iframe' && (opts.force || S.reload)){
+      loadFrame(S.t, S.playing);
+    }
+    render(true); save();
+  }
+  function setPlaying(v){
+    S.playing = !!v;
+    if(S.mode === 'local' && localVideo){
+      S.playing ? localVideo.play().catch(()=>{}) : localVideo.pause();
+    }else if(S.mode === 'iframe'){
+      if(S.reload) loadFrame(S.t, S.playing);
+      else if(S.playing) toast('视频已在播放？若右侧不同步，按 C 对齐时间');
+    }
+    veil.classList.add('hide');
+    render(true); save();
+  }
+  function togglePlay(){ setPlaying(!S.playing); }
+
+  /* 无视频计时模式：环境里 iframe 被拦时，右侧联动照样能用 */
+  function setManual(on){
+    const panel = $('manualPanel');
+    if(on){
+      if(S.mode === 'local' && localVideo) localVideo.pause();
+      S.mode = 'manual';
+      frame.style.display = 'none';
+      if(localVideo) localVideo.style.display = 'none';
+      panel.classList.add('on');
+      veil.classList.add('hide');
+      $('btnManual').classList.add('on');
+      $('btnLocal').classList.remove('on');
+      el.modeBadge.className = 'badge';
+      el.modeBadge.textContent = '无视频 · 手动计时';
+    }else{
+      // 若之前载过本地视频，彻底清掉，避免它盖在 iframe 上面
+      if(localVideo){
+        localVideo.pause(); localVideo.remove();
+        try{ URL.revokeObjectURL(localVideo.src); }catch(e){}
+        localVideo = null;
+        S.dur = DEFAULT_DUR; S.t = clamp(S.t, 0, DEFAULT_DUR);
+        el.durLabel.textContent = fmt(S.dur); el.tDur.textContent = fmt(S.dur);
+        buildMarks();
+      }
+      $('btnLocal').classList.remove('on');
+      S.mode = 'iframe';
+      frame.style.display = '';
+      panel.classList.remove('on');
+      $('btnManual').classList.remove('on');
+      el.modeBadge.className = 'badge';
+      el.modeBadge.textContent = 'B 站在线 · 估算同步';
+      loadFrame(S.t, S.playing);
+    }
+    render(true); save();
+  }
+
+  /* =======================================================
+     6. 时钟
+     ======================================================= */
+  function tick(ts){
+    if(!S.lastFrame) S.lastFrame = ts;
+    const dt = (ts - S.lastFrame)/1000;
+    S.lastFrame = ts;
+    if(S.playing && dt < 1.5){          // 忽略切后台造成的巨大跳跃
+      S.t += dt * S.rate;
+      if(S.t >= S.dur){ S.t = S.dur; S.playing = false; }
+    }
+    render(false);
+    requestAnimationFrame(tick);
+  }
+
+  /* =======================================================
+     7. 渲染
+     ======================================================= */
+  let lastIdx = -1, lastPt = -1, lastSec = -1;
+
+  function render(force){
+    const i = chapterIndexAt(S.t);
+    const ch = S.chapters[i], next = S.chapters[i+1];
+    const cStart = ch.t, cEnd = chapterEnd(i);
+    const span = Math.max(1, cEnd - cStart);
+    const ratio = clamp((S.t - cStart)/span, 0, 1);
+
+    /* --- 时间轴 --- */
+    const p = S.t / S.dur * 100;
+    fill.style.width = p + '%';
+    knob.style.left = p + '%';
+    const sec = Math.floor(S.t);
+    if(sec !== lastSec || force){
+      lastSec = sec;
+      el.tCur.textContent = fmt(S.t);
+      el.mTime.textContent = fmt(S.t);
+      el.cRange.textContent = fmt(cStart) + ' – ' + fmt(cEnd);
+      el.cNextName.textContent = next ? next.title.replace(/^[^｜|]*[｜|]\s*/,'') : '已到结尾';
+      const left = next ? next.t - S.t : 0;
+      el.cNextIn.textContent = next ? ('还有 ' + fmt(left)) : '';
+      el.cBar.style.width = (ratio*100).toFixed(1) + '%';
+      el.tState.textContent = S.playing ? ('播放中 · ' + S.rate + '×') : '已暂停';
+      el.btnPlay.innerHTML = S.playing ? '❚❚ 暂停' : '▶ 播放';
+      el.syncBadge.textContent = S.playing ? '同步中' : '已暂停';
+      el.syncBadge.className = S.playing ? 'badge live' : 'badge';
+    }
+
+    /* --- 主内容 --- */
+    if(i !== lastIdx || force){
+      lastIdx = i;
+      el.cIndex.textContent = '段落 ' + String(i+1).padStart(2,'0');
+      el.cTitle.textContent = ch.title;
+      el.cSub.textContent = ch.sub || '';
+      if(ch.quote){
+        el.cQuote.style.display = '';
+        el.cQuote.innerHTML = '「' + ch.quote.text + '」<small>—— ' + (ch.quote.from||'') + '</small>';
+      }else{
+        el.cQuote.style.display = 'none';
+      }
+      el.cPoints.innerHTML = ch.points.map((p,k)=>
+        '<li data-k="'+k+'"><span class="pi">'+(k+1)+'</span><span>'+p+'</span></li>'
+      ).join('');
+      el.cTags.innerHTML = (ch.tags||[]).map(t=>'<span class="tag">'+t+'</span>').join('');
+      el.tCh.textContent = i+1;
+      // 章节列表高亮
+      Array.prototype.forEach.call(el.chList.children, (node,k)=>{
+        node.classList.toggle('active', k === i);
+        node.classList.toggle('done', k < i);
+      });
+    }
+
+    /* --- 要点逐条点亮 --- */
+    const pts = ch.points.length;
+    const active = clamp(Math.floor(ratio * pts), 0, pts-1);
+    if(active !== lastPt || force){
+      lastPt = active;
+      Array.prototype.forEach.call(el.cPoints.children, (node,k)=>{
+        node.classList.toggle('active', k === active);
+        node.classList.toggle('done', k < active);
+      });
+    }
+  }
+
+  /* 章节时间刻度线 */
+  function buildMarks(){
+    track.querySelectorAll('.mark').forEach(n=>n.remove());
+    S.chapters.forEach((c,k)=>{
+      if(k === 0) return;
+      const m = document.createElement('div');
+      m.className = 'mark';
+      m.style.left = (c.t / S.dur * 100) + '%';
+      m.title = fmt(c.t) + ' · ' + c.title;
+      track.appendChild(m);
+    });
+  }
+
+  /* 章节列表 */
+  function buildRail(){
+    el.chList.innerHTML = S.chapters.map((c,k)=>{
+      const end = chapterEnd(k);
+      return '<div class="ch-item" data-k="'+k+'">' +
+               '<span class="ch-num">'+(k+1)+'</span>' +
+               '<span class="ch-name">'+c.title+'</span>' +
+               '<span class="ch-t">'+fmt(c.t)+'–'+fmt(end)+'</span>' +
+               '<button class="ch-mark" data-mark="'+k+'" title="把当前播放时间设为这一段的起点">打点</button>' +
+             '</div>';
+    }).join('');
+    el.tChAll.textContent = S.chapters.length;
+  }
+
+  /* =======================================================
+     8. 交互
+     ======================================================= */
+  // 播放 / 暂停
+  el.btnPlay.addEventListener('click', togglePlay);
+  veil.addEventListener('click', ()=>{ setPlaying(true); });
+
+  // 时间轴拖动
+  let dragging = false;
+  function posToTime(clientX){
+    const r = track.getBoundingClientRect();
+    const x = clamp((clientX - r.left)/r.width, 0, 1);
+    return x * S.dur;
+  }
+  track.addEventListener('pointerdown', e=>{
+    dragging = true; track.setPointerCapture(e.pointerId);
+    seek(posToTime(e.clientX));
+  });
+  track.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    S.t = clamp(posToTime(e.clientX), 0, S.dur);
+    render(true);
+  });
+  track.addEventListener('pointerup', e=>{
+    if(!dragging) return;
+    dragging = false;
+    seek(S.t);   // 松手才真正定位播放器
+  });
+
+  // 控制按钮
+  $('btnBack5').addEventListener('click', ()=>seek(S.t-5));
+  $('btnFwd5').addEventListener('click', ()=>seek(S.t+5));
+  $('btnPrev').addEventListener('click', ()=>{
+    const i = chapterIndexAt(S.t);
+    const target = (S.t - S.chapters[i].t > 3) ? S.chapters[i].t : S.chapters[Math.max(0,i-1)].t;
+    seek(target);
+  });
+  $('btnNext').addEventListener('click', ()=>{
+    const i = chapterIndexAt(S.t);
+    if(i+1 < S.chapters.length) seek(S.chapters[i+1].t);
+  });
+  $('selRate').addEventListener('change', e=>{
+    S.rate = parseFloat(e.target.value) || 1;
+    if(localVideo) localVideo.playbackRate = S.rate;
+    render(true); save();
+  });
+  $('chkReload').addEventListener('change', e=>{ S.reload = e.target.checked; });
+
+  // 打点 / 跳转
+  el.chList.addEventListener('click', e=>{
+    const mk = e.target.closest('[data-mark]');
+    if(mk){
+      const k = +mk.getAttribute('data-mark');
+      S.chapters[k].t = Math.round(S.t);
+      buildRail(); buildMarks(); render(true); save();
+      toast('已把 ' + fmt(S.chapters[k].t) + ' 设为第 ' + (k+1) + ' 段起点');
+      return;
+    }
+    const item = e.target.closest('.ch-item');
+    if(item){ seek(S.chapters[+item.dataset.k].t); }
+  });
+
+  // 导出 / 导入 / 重置
+  $('btnExport').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify({bv:BV, duration:S.dur, chapters:S.chapters}, null, 2)],
+                          {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = BV + '-chapters.json';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    toast('已导出章节 JSON');
+  });
+  $('btnImport').addEventListener('click', ()=>$('fileImport').click());
+  $('fileImport').addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      try{
+        const d = JSON.parse(r.result);
+        if(!Array.isArray(d.chapters)) throw 0;
+        S.chapters = d.chapters;
+        if(d.duration) S.dur = d.duration;
+        buildRail(); buildMarks(); render(true); save();
+        toast('已导入 ' + S.chapters.length + ' 个段落');
+      }catch(err){ toast('JSON 解析失败'); }
+    };
+    r.readAsText(f);
+    e.target.value = '';
+  });
+  $('btnReset').addEventListener('click', ()=>{
+    if(!confirm('重置为默认章节与时间戳？你「打点」过的修改会丢失。')) return;
+    S.chapters = JSON.parse(JSON.stringify(DEFAULT_CHAPTERS));
+    S.dur = DEFAULT_DUR;
+    buildRail(); buildMarks(); render(true); save();
+    toast('已重置');
+  });
+
+  /* ---------- 对齐弹窗 ---------- */
+  const mask = $('mask'), alignInput = $('alignInput');
+  function openAlign(){
+    const wasPlaying = S.playing;
+    if(S.mode === 'local' && localVideo) localVideo.pause();
+    S.playing = false;
+    $('alignNow').textContent = fmt(S.t);
+    mask.classList.add('on');
+    alignInput.value = fmt(S.t);
+    setTimeout(()=>{ alignInput.focus(); alignInput.select(); }, 30);
+    mask.dataset.wasPlaying = wasPlaying ? '1' : '';
+  }
+  function closeAlign(){ mask.classList.remove('on'); }
+  $('btnAlign').addEventListener('click', openAlign);
+  $('alignCancel').addEventListener('click', closeAlign);
+  mask.addEventListener('click', e=>{ if(e.target === mask) closeAlign(); });
+  $('alignOk').addEventListener('click', ()=>{
+    const v = parseTime(alignInput.value);
+    if(v === null){ toast('时间格式不对，试试 07:35'); return; }
+    S.t = clamp(v, 0, S.dur);
+    if(S.mode === 'iframe' && S.reload) loadFrame(S.t, false);
+    if(S.mode === 'local' && localVideo) localVideo.currentTime = S.t;
+    closeAlign(); render(true); save();
+    toast('已对齐到 ' + fmt(S.t));
+  });
+  alignInput.addEventListener('keydown', e=>{
+    if(e.key === 'Enter') $('alignOk').click();
+    if(e.key === 'Escape') closeAlign();
+  });
+
+  /* ---------- 无视频计时 / 新标签页 ---------- */
+  function toggleManual(){ setManual(S.mode !== 'manual'); }
+  $('btnManual').addEventListener('click', toggleManual);
+  $('btnManual2').addEventListener('click', toggleManual);
+  $('btnOpenTab').addEventListener('click', ()=>{
+    window.open(FRAME_BASE + '&autoplay=1&t=' + Math.floor(S.t), '_blank', 'noopener');
+    toast('已在新标签页打开，从 ' + fmt(S.t) + ' 开始');
+  });
+  $('btnHideTip').addEventListener('click', ()=>{ $('embedTip').style.display = 'none'; });
+
+  /* ---------- 本地视频（精确同步） ---------- */
+  let localVideo = null;
+  $('btnLocal').addEventListener('click', ()=>{
+    if(S.mode === 'local'){
+      // 切回 B 站
+      if(localVideo){ localVideo.pause(); localVideo.remove(); localVideo = null; }
+      frame.style.display = '';
+      S.mode = 'iframe'; S.dur = DEFAULT_DUR; S.t = 0; S.playing = false;
+      $('btnLocal').classList.remove('on');
+      el.modeBadge.className = 'badge'; el.modeBadge.textContent = 'B 站在线 · 估算同步';
+      el.durLabel.textContent = fmt(S.dur); el.tDur.textContent = fmt(S.dur);
+      loadFrame(0, false);
+      buildMarks(); buildRail(); render(true);
+      toast('已切回 B 站在线播放');
+      return;
+    }
+    $('fileLocal').click();
+  });
+  $('fileLocal').addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const v = document.createElement('video');
+    v.src = URL.createObjectURL(f);
+    v.controls = true; v.playsInline = true; v.preload = 'metadata';
+    v.style.objectFit = 'contain';
+    box.insertBefore(v, bufTip);
+    frame.style.display = 'none';
+    $('manualPanel').classList.remove('on');
+    $('btnManual').classList.remove('on');
+    localVideo = v;
+    S.mode = 'local'; S.playing = false; S.t = 0;
+
+    v.addEventListener('loadedmetadata', ()=>{
+      S.dur = v.duration || DEFAULT_DUR;
+      if(Math.abs(S.dur - DEFAULT_DUR) > 5){
+        if(confirm('本地视频时长 ' + fmt(S.dur) + '，与线上 ' + fmt(DEFAULT_DUR) +
+                   ' 不一致。\n要把所有章节时间按比例重新映射吗？（建议选「确定」）')){
+          const k = S.dur / DEFAULT_DUR;
+          S.chapters.forEach(c=>{ c.t = Math.round(c.t * k); });
+        }
+      }
+      v.playbackRate = S.rate;
+      el.durLabel.textContent = fmt(S.dur); el.tDur.textContent = fmt(S.dur);
+      buildMarks(); buildRail(); render(true);
+    });
+    v.addEventListener('timeupdate', ()=>{ S.t = v.currentTime; render(false); });
+    v.addEventListener('play',  ()=>{ S.playing = true;  veil.classList.add('hide'); render(true); });
+    v.addEventListener('pause', ()=>{ S.playing = false; render(true); });
+    v.addEventListener('seeked', ()=>{ S.t = v.currentTime; render(true); });
+
+    $('btnLocal').classList.add('on');
+    el.modeBadge.className = 'badge exact';
+    el.modeBadge.textContent = '本地视频 · 精确同步';
+    veil.classList.add('hide');
+    toast('已切换为本地视频，进度 100% 精确');
+    e.target.value = '';
+  });
+
+  /* ---------- 键盘 ---------- */
+  window.addEventListener('keydown', e=>{
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if(tag === 'INPUT' || tag === 'TEXTAREA' || mask.classList.contains('on')) return;
+    if(e.code === 'Space'){ e.preventDefault(); togglePlay(); }
+    else if(e.key === 'ArrowLeft'){ e.preventDefault(); seek(S.t-5); }
+    else if(e.key === 'ArrowRight'){ e.preventDefault(); seek(S.t+5); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); $('btnPrev').click(); }
+    else if(e.key === 'ArrowDown'){ e.preventDefault(); $('btnNext').click(); }
+    else if(e.key === 'c' || e.key === 'C'){ openAlign(); }
+    else if(/^[1-9]$/.test(e.key)){
+      const k = +e.key - 1;
+      if(k < S.chapters.length) seek(S.chapters[k].t);
+    }
+  });
+
+  /* ---------- 切后台暂停计时（避免时钟乱跑） ---------- */
+  document.addEventListener('visibilitychange', ()=>{
+    S.lastFrame = 0;
+    if(document.hidden && S.mode === 'iframe') el.syncBadge.textContent = '已切走';
+    else el.syncBadge.textContent = S.playing ? '同步中' : '已暂停';
+  });
+
+  /* =======================================================
+     9. 启动
+     ======================================================= */
+  buildRail();
+  buildMarks();
+  el.tDur.textContent = fmt(S.dur);
+  el.durLabel.textContent = fmt(S.dur);
+  el.syncBadge.textContent = '未开始';
+
+  // 恢复上次位置
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(typeof d.t === 'number') S.t = clamp(d.t, 0, S.dur);
+      if(d.rate){ S.rate = d.rate; $('selRate').value = String(d.rate); }
+    }
+  }catch(e){}
+
+  render(true);
+  requestAnimationFrame(tick);
+
+  window.addEventListener('beforeunload', save);
+  setInterval(save, 5000);
+})();
+</script>
+</body>
+</html>
