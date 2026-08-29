@@ -16,8 +16,11 @@
 |------|------|
 | `viewpoints.md` | 时间码 + 一句话摘要的观点清单，含广告检测结论（最便携，推荐先读） |
 | `viewpoints.json` | 结构化数据（18 个观点 + 时间区间），便于二次处理 / 接入产品 |
-| `timeline.html` | 可交互时间轴：内嵌本地播放器，点击任意观点彩条即跳转到对应时间戳 |
 | `build_timeline.py` | 时间轴生成脚本（输入 `viewpoints.json` + 视频路径，方法可复用） |
+
+> **交互展示已迁移**：这 18 个观点已内联进站点的 `pages/sync-player.html`
+> （左侧 B 站播放器 + 右侧随进度联动），原先的 `timeline.html` 因依赖本地
+> `file://` 绝对路径的 mp4、无法在 GitHub Pages 上播放，已移除。
 
 ## 分析方法
 
@@ -36,10 +39,9 @@
 ## 查看方式
 
 - **最便携**：直接读 `viewpoints.md`，含完整时间码清单与广告结论。
-- **可交互**：用系统浏览器打开 `timeline.html`，点击彩条/列表项跳转播放。
-  - ⚠️ `timeline.html` 内嵌播放器通过 `file://` **绝对路径**指向原始 mp4
-    （`E:/projects/video-fetcher/downloads/BV1mQuC6fEFz/蒋介石明明是名中正字介石，为何大陆会普遍称他蒋介石？.mp4`），
-    需该文件存在才能播放；若路径变化，请编辑 `timeline.html` 第 31 行的 `src`。
+- **可交互**：打开站点的 `../../pages/sync-player.html`，左侧播 B 站视频、右侧内容随进度联动，18 个观点按时间轴高亮。
+- **本地生成时间轴（可选）**：`python build_timeline.py` 会基于 `viewpoints.json` 生成一份 `timeline.html`，
+  它内嵌的是**本地 mp4 绝对路径**，仅供本地查看，不适用于 GitHub Pages。
 
 ## 已知限制
 

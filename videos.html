@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>视频列表 · FactEasy</title>
+<style>
+  :root{
+    --bg:#0b0e13;
+    --bg-soft:#11161f;
+    --panel:#151b25;
+    --panel-2:#1a222e;
+    --line:#252d3a;
+    --line-soft:#1e2632;
+    --txt:#e7edf5;
+    --txt-dim:#9aa7b8;
+    --txt-faint:#66748a;
+    --accent:#e0a45a;
+    --accent-soft:rgba(224,164,90,.14);
+    --accent-2:#7fb2ff;
+    --ok:#4ec9a0;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(224,164,90,.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(127,178,255,.06), transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent-2);text-decoration:none;}
+
+  /* ---------- 导航栏 ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    padding:14px 26px;border-bottom:1px solid var(--line-soft);
+    background:rgba(11,14,19,.85);backdrop-filter:blur(10px);
+    position:sticky;top:0;z-index:50;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .logo{
+    width:26px;height:26px;border-radius:8px;
+    background:linear-gradient(135deg,var(--accent),#c9833c);
+    display:grid;place-items:center;font-size:14px;font-weight:800;color:#241703;
+  }
+  .brand .name{font-size:16px;font-weight:700;}
+  .brand .sub{font-size:11.5px;color:var(--txt-faint);}
+  .tb-spacer{flex:1;}
+  nav.mainnav{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+  nav.mainnav a{
+    color:var(--txt-dim);font-size:13.5px;padding:7px 13px;
+    border-radius:9px;transition:background .15s,color .15s;white-space:nowrap;
+  }
+  nav.mainnav a:hover{background:var(--panel-2);color:var(--txt);}
+  nav.mainnav a.here{color:var(--accent);background:var(--accent-soft);}
+
+  .wrap{max-width:1240px;margin:0 auto;padding:0 26px 72px;}
+
+  /* ---------- 页头 ---------- */
+  .page-head{padding:44px 0 8px;}
+  h1{margin:0 0 10px;font-size:clamp(24px,3.2vw,32px);font-weight:720;letter-spacing:-.3px;}
+  .page-head p{margin:0;color:var(--txt-dim);font-size:14.5px;max-width:720px;}
+
+  /* ---------- 筛选条 ---------- */
+  .toolbar{
+    margin:26px 0 16px;padding:14px 16px;
+    background:linear-gradient(180deg,var(--panel) 0%,var(--bg-soft) 100%);
+    border:1px solid var(--line-soft);border-radius:var(--radius);
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .tb-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .search{
+    flex:1;min-width:220px;
+    display:flex;align-items:center;gap:8px;
+    background:var(--bg-soft);border:1px solid var(--line);
+    border-radius:10px;padding:8px 12px;
+  }
+  .search input{
+    flex:1;background:transparent;border:0;outline:0;
+    color:var(--txt);font-size:13.5px;font-family:inherit;
+  }
+  .search input::placeholder{color:var(--txt-faint);}
+  .count{font-size:12.5px;color:var(--txt-faint);white-space:nowrap;}
+  .count b{color:var(--accent);font-weight:650;}
+
+  .tagbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .tagbar .lbl{font-size:12px;color:var(--txt-faint);margin-right:2px;}
+  .chip{
+    font-size:12px;padding:4px 11px;border-radius:999px;
+    border:1px solid var(--line);background:var(--panel-2);
+    color:var(--txt-dim);cursor:pointer;
+    transition:background .15s,color .15s,border-color .15s;
+    user-select:none;
+  }
+  .chip:hover{border-color:#3a465a;color:var(--txt);}
+  .chip.on{
+    border-color:rgba(224,164,90,.45);background:var(--accent-soft);color:var(--accent);
+  }
+
+  /* ---------- 表格 ---------- */
+  .tablewrap{
+    background:linear-gradient(180deg,var(--panel) 0%,var(--bg-soft) 100%);
+    border:1px solid var(--line-soft);border-radius:var(--radius);
+    overflow:hidden;
+  }
+  table{width:100%;border-collapse:collapse;}
+  thead th{
+    text-align:left;font-size:12px;font-weight:600;letter-spacing:.4px;
+    color:var(--txt-faint);text-transform:none;
+    padding:12px 16px;background:var(--bg-soft);
+    border-bottom:1px solid var(--line);
+    white-space:nowrap;
+  }
+  thead th.num{text-align:right;}
+  thead th.sortable{cursor:pointer;user-select:none;}
+  thead th.sortable:hover{color:var(--txt-dim);}
+  thead th .ind{opacity:.5;font-size:10px;margin-left:3px;}
+  tbody td{
+    padding:14px 16px;border-bottom:1px solid var(--line-soft);
+    vertical-align:middle;font-size:13.5px;
+  }
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr{transition:background .14s;}
+  tbody tr:hover{background:rgba(127,178,255,.045);}
+
+  .col-source{width:92px;}
+  .col-author{width:104px;}
+  .col-views{width:104px;text-align:right;font-variant-numeric:tabular-nums;}
+  .col-tags{width:280px;}
+  .col-open{width:78px;text-align:right;}
+
+  .src{
+    display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:6px;
+    border:1px solid rgba(224,164,90,.3);background:var(--accent-soft);
+    color:var(--accent);white-space:nowrap;
+  }
+  .author{color:var(--txt-dim);white-space:nowrap;}
+
+  .t-title{
+    display:block;color:var(--txt);font-weight:600;font-size:14px;
+    line-height:1.5;margin-bottom:4px;
+  }
+  .t-title:hover{color:var(--accent-2);}
+  .t-meta{font-size:11.5px;color:var(--txt-faint);display:flex;gap:10px;flex-wrap:wrap;}
+  .t-meta a{color:var(--txt-faint);border-bottom:1px dotted var(--line);}
+  .t-meta a:hover{color:var(--accent-2);}
+
+  .views{font-weight:650;color:var(--txt);}
+  .views-sub{font-size:11px;color:var(--txt-faint);}
+
+  .tags{display:flex;gap:5px;flex-wrap:wrap;}
+  .tag{
+    font-size:11px;padding:2px 8px;border-radius:5px;
+    background:var(--panel-2);border:1px solid var(--line);
+    color:var(--txt-dim);white-space:nowrap;cursor:pointer;
+    transition:color .14s,border-color .14s;
+  }
+  .tag:hover{color:var(--accent);border-color:rgba(224,164,90,.4);}
+  .tag.on{color:var(--accent);background:var(--accent-soft);border-color:rgba(224,164,90,.45);}
+
+  .btn-open{
+    display:inline-block;font-size:12.5px;padding:5px 12px;border-radius:8px;
+    background:var(--accent-soft);border:1px solid rgba(224,164,90,.34);
+    color:var(--accent);white-space:nowrap;transition:background .15s;
+  }
+  .btn-open:hover{background:rgba(224,164,90,.22);}
+
+  .empty{
+    padding:52px 16px;text-align:center;color:var(--txt-faint);font-size:13.5px;
+  }
+  .empty .big{font-size:15px;color:var(--txt-dim);margin-bottom:6px;}
+
+  footer{
+    margin-top:26px;padding-top:18px;border-top:1px solid var(--line-soft);
+    color:var(--txt-faint);font-size:12.5px;
+    display:flex;gap:14px;flex-wrap:wrap;align-items:center;
+  }
+  footer .spacer{flex:1;}
+
+  /* ---------- 窄屏：转卡片 ---------- */
+  @media (max-width:900px){
+    .wrap{padding:0 16px 56px;}
+    thead{display:none;}
+    tbody td{
+      display:flex;gap:12px;padding:8px 16px;border-bottom:0;
+    }
+    tbody td::before{
+      content:attr(data-label);
+      flex:0 0 62px;color:var(--txt-faint);font-size:12px;padding-top:2px;
+    }
+    tbody td.col-views{text-align:left;}
+    tbody td.col-open{text-align:left;}
+    tbody tr{
+      display:block;padding:14px 0;border-bottom:1px solid var(--line-soft);
+    }
+    tbody tr:last-child{border-bottom:0;}
+  }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">F</div>
+      <div>
+        <div class="name">FactEasy</div>
+        <div class="sub">事实核查工作台</div>
+      </div>
+    </div>
+    <div class="tb-spacer"></div>
+    <nav class="mainnav" aria-label="主导航">
+      <a href="index.html">首页</a>
+      <a href="videos.html" class="here">视频列表</a>
+      <a href="pages/sync-player.html">同步阅读器</a>
+      <a href="analysis/video-viewpoints/viewpoints.md">观点数据</a>
+      <a href="index.html#docs">研究文档</a>
+    </nav>
+  </header>
+
+  <div class="wrap">
+
+    <div class="page-head">
+      <h1>视频列表</h1>
+      <p>
+        已收录视频的入口索引。每条记录包含来源、作者、标题、播放数与主题标签；
+        支持按标签筛选与关键词检索。新增视频只需在页面底部的数据数组中追加一条记录，无需改动任何渲染逻辑。
+      </p>
+    </div>
+
+    <!-- 筛选工具条 -->
+    <div class="toolbar">
+      <div class="tb-row">
+        <label class="search">
+          <span style="color:var(--txt-faint);font-size:13px;">🔍</span>
+          <input id="q" type="search" placeholder="搜索标题、作者、来源或标签…" autocomplete="off">
+        </label>
+        <span class="count" id="count">共 <b>0</b> 条</span>
+      </div>
+      <div class="tagbar" id="tagbar">
+        <span class="lbl">标签筛选：</span>
+      </div>
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="col-source">来源</th>
+            <th class="col-author">作者</th>
+            <th>标题</th>
+            <th class="col-views num sortable" id="thViews">
+              播放数<span class="ind" id="sortInd">↓</span>
+            </th>
+            <th class="col-tags">相关标签</th>
+            <th class="col-open">操作</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty" style="display:none;">
+        <div class="big">没有匹配的视频</div>
+        <div>试试清空搜索框或取消标签筛选</div>
+      </div>
+    </div>
+
+    <footer>
+      <span>FactEasy · 视频列表</span>
+      <span class="spacer"></span>
+      <span id="srcNote"></span>
+    </footer>
+
+  </div>
+
+<script>
+/* =========================================================================
+ *  数据区 —— 新增视频只需往这个数组里追加一条，下面的渲染/筛选逻辑完全不用改
+ * -------------------------------------------------------------------------
+ *  必填字段：
+ *    source : 来源平台或出处（字符串）
+ *    author : 发布者名称（字符串）
+ *    title  : 视频标题（字符串）
+ *    views  : 播放数（数字，来源站口径）
+ *    tags   : 相关标签数组（字符串数组，用于分类与检索）
+ *    url    : 本站视频页面入口（相对或绝对链接）
+ *
+ *  可选字段（缺失时自动隐藏，不影响渲染）：
+ *    origin    : 原站地址      duration  : 时长（秒）
+ *    published : 发布日期      note      : 备注
+ * ========================================================================= */
+const VIDEOS = [
+  {
+    source: '哔哩哔哩',
+    author: '山河有声',
+    title: '蒋介石明明是名中正字介石，为何大陆会普遍称他蒋介石？',
+    views: 2497826,
+    tags: ['孙中山', '中华民国', '姓名', '抗日战争', '毛主席', '国民党', '国共合作', '常凯申', '刘伯承', '表字'],
+    url: 'pages/sync-player.html',
+    origin: 'https://www.bilibili.com/video/BV1mQuC6fEFz/',
+    duration: 1214,
+    published: '2026-08-12'
+  }
+
+  /* ---- 追加模板：复制下面这段，改掉内容即可 ----
+  ,{
+    source: '哔哩哔哩',
+    author: 'UP 主名称',
+    title: '视频标题',
+    views: 0,
+    tags: ['标签A', '标签B'],
+    url: 'pages/xxx.html',
+    origin: 'https://www.bilibili.com/video/BVxxxxxxxxx/',
+    duration: 0,
+    published: 'YYYY-MM-DD'
+  }
+  ---------------------------------------------- */
+];
+
+/* =========================================================================
+ *  以下为核心逻辑：渲染 + 筛选 + 排序。新增数据无需修改这里。
+ * ========================================================================= */
+(function () {
+  const tbody   = document.getElementById('tbody');
+  const tagbar  = document.getElementById('tagbar');
+  const qInput  = document.getElementById('q');
+  const countEl = document.getElementById('count');
+  const emptyEl = document.getElementById('empty');
+  const thViews = document.getElementById('thViews');
+  const sortInd = document.getElementById('sortInd');
+
+  let activeTags = new Set();
+  let sortDesc   = true;
+
+  /* ---- 工具函数 ---- */
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+
+  function fmtViews(n) {
+    if (typeof n !== 'number' || isNaN(n)) return '—';
+    if (n >= 1e8) return (n / 1e8).toFixed(2) + ' 亿';
+    if (n >= 1e4) return (n / 1e4).toFixed(1) + ' 万';
+    return n.toLocaleString('zh-CN');
+  }
+
+  function fmtDur(sec) {
+    if (typeof sec !== 'number' || !sec) return '';
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  /* ---- 从数据自动收集全部标签（去重，按出现频次降序） ---- */
+  function collectTags() {
+    const freq = new Map();
+    VIDEOS.forEach((v) => (v.tags || []).forEach((t) => freq.set(t, (freq.get(t) || 0) + 1)));
+    return [...freq.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'))
+                              .map((e) => e[0]);
+  }
+
+  /* ---- 筛选 + 排序 ---- */
+  function currentList() {
+    const q = (qInput.value || '').trim().toLowerCase();
+    let list = VIDEOS.filter((v) => {
+      const hitTag = activeTags.size === 0 ||
+        (v.tags || []).some((t) => activeTags.has(t));
+      if (!hitTag) return false;
+      if (!q) return true;
+      const hay = [v.title, v.author, v.source, (v.tags || []).join(' '), v.note || '']
+        .join(' ').toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+    list.sort((a, b) => (sortDesc ? b.views - a.views : a.views - b.views));
+    return list;
+  }
+
+  /* ---- 渲染一行 ---- */
+  function rowHTML(v) {
+    const meta = [];
+    if (v.duration)  meta.push('<span>' + esc(fmtDur(v.duration)) + '</span>');
+    if (v.published) meta.push('<span>' + esc(v.published) + '</span>');
+    if (v.origin)    meta.push('<a href="' + esc(v.origin) + '" target="_blank" rel="noopener">原站 ↗</a>');
+    if (v.note)      meta.push('<span>' + esc(v.note) + '</span>');
+
+    const tags = (v.tags || []).map((t) =>
+      '<span class="tag' + (activeTags.has(t) ? ' on' : '') + '" data-tag="' + esc(t) + '">' +
+      esc(t) + '</span>'
+    ).join('');
+
+    return '' +
+      '<tr>' +
+        '<td class="col-source" data-label="来源"><span class="src">' + esc(v.source) + '</span></td>' +
+        '<td class="col-author" data-label="作者"><span class="author">' + esc(v.author) + '</span></td>' +
+        '<td data-label="标题">' +
+          '<a class="t-title" href="' + esc(v.url) + '">' + esc(v.title) + '</a>' +
+          (meta.length ? '<div class="t-meta">' + meta.join('') + '</div>' : '') +
+        '</td>' +
+        '<td class="col-views" data-label="播放数">' +
+          '<div class="views">' + fmtViews(v.views) + '</div>' +
+          '<div class="views-sub">' + (typeof v.views === 'number' ? v.views.toLocaleString('zh-CN') : '') + '</div>' +
+        '</td>' +
+        '<td class="col-tags" data-label="标签"><div class="tags">' + (tags || '—') + '</div></td>' +
+        '<td class="col-open" data-label="操作">' +
+          '<a class="btn-open" href="' + esc(v.url) + '">打开 →</a>' +
+        '</td>' +
+      '</tr>';
+  }
+
+  /* ---- 主渲染 ---- */
+  function render() {
+    const list = currentList();
+    tbody.innerHTML = list.map(rowHTML).join('');
+    countEl.innerHTML = '共 <b>' + list.length + '</b> 条' +
+      (list.length !== VIDEOS.length ? '（总 ' + VIDEOS.length + ' 条）' : '');
+    emptyEl.style.display = list.length ? 'none' : 'block';
+
+    // 表格内标签点击 → 切换筛选
+    tbody.querySelectorAll('.tag').forEach((el) => {
+      el.addEventListener('click', () => toggleTag(el.dataset.tag));
+    });
+  }
+
+  /* ---- 标签栏 ---- */
+  function renderTagbar() {
+    const all = collectTags();
+    // 保留"标签筛选："标签，重建 chips
+    [...tagbar.children].forEach((n) => { if (!n.classList.contains('lbl')) n.remove(); });
+    all.forEach((t) => {
+      const b = document.createElement('span');
+      b.className = 'chip' + (activeTags.has(t) ? ' on' : '');
+      b.textContent = t;
+      b.addEventListener('click', () => toggleTag(t));
+      tagbar.appendChild(b);
+    });
+  }
+
+  function toggleTag(t) {
+    if (activeTags.has(t)) activeTags.delete(t); else activeTags.add(t);
+    renderTagbar();
+    render();
+  }
+
+  /* ---- 事件绑定 ---- */
+  qInput.addEventListener('input', render);
+  thViews.addEventListener('click', () => {
+    sortDesc = !sortDesc;
+    sortInd.textContent = sortDesc ? '↓' : '↑';
+    render();
+  });
+
+  /* ---- 初始化 ---- */
+  renderTagbar();
+  render();
+  document.getElementById('srcNote').textContent =
+    '数据来源：' + [...new Set(VIDEOS.map((v) => v.source))].join('、');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FactEasy · 事实核查工作台</title>
+<style>
+  :root{
+    --bg:#0b0e13;
+    --bg-soft:#11161f;
+    --panel:#151b25;
+    --panel-2:#1a222e;
+    --line:#252d3a;
+    --line-soft:#1e2632;
+    --txt:#e7edf5;
+    --txt-dim:#9aa7b8;
+    --txt-faint:#66748a;
+    --accent:#e0a45a;
+    --accent-soft:rgba(224,164,90,.14);
+    --accent-2:#7fb2ff;
+    --ok:#4ec9a0;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(224,164,90,.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(127,178,255,.06), transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:15px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent-2);text-decoration:none;}
+
+  /* ---------- 导航栏 ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    padding:14px 26px;
+    border-bottom:1px solid var(--line-soft);
+    background:rgba(11,14,19,.85);
+    backdrop-filter:blur(10px);
+    position:sticky;top:0;z-index:50;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .logo{
+    width:26px;height:26px;border-radius:8px;
+    background:linear-gradient(135deg,var(--accent),#c9833c);
+    display:grid;place-items:center;
+    font-size:14px;font-weight:800;color:#241703;
+  }
+  .brand .name{font-size:16px;font-weight:700;letter-spacing:.3px;}
+  .brand .sub{font-size:11.5px;color:var(--txt-faint);}
+  .tb-spacer{flex:1;}
+  nav.mainnav{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+  nav.mainnav a{
+    color:var(--txt-dim);
+    font-size:13.5px;
+    padding:7px 13px;
+    border-radius:9px;
+    transition:background .15s,color .15s;
+    white-space:nowrap;
+  }
+  nav.mainnav a:hover{
+    background:var(--panel-2);
+    color:var(--txt);
+  }
+  nav.mainnav a.here{
+    color:var(--accent);
+    background:var(--accent-soft);
+  }
+  nav.mainnav a.video-link{
+    color:var(--accent);
+    border:1px solid rgba(224,164,90,.34);
+  }
+  nav.mainnav a.video-link:hover{
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+
+  /* ---------- 容器 ---------- */
+  .wrap{max-width:1180px;margin:0 auto;padding:0 26px 72px;}
+
+  /* ---------- Hero ---------- */
+  .hero{padding:64px 0 40px;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:12px;color:var(--accent);
+    border:1px solid rgba(224,164,90,.3);
+    background:var(--accent-soft);
+    padding:5px 12px;border-radius:999px;
+    margin-bottom:20px;
+  }
+  h1{
+    margin:0 0 16px;
+    font-size:clamp(30px,4.4vw,46px);
+    line-height:1.2;
+    letter-spacing:-.5px;
+    font-weight:750;
+  }
+  h1 em{
+    font-style:normal;
+    background:linear-gradient(100deg,var(--accent),#f2c78a);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  .lede{
+    max-width:660px;
+    color:var(--txt-dim);
+    font-size:16px;
+    margin:0 0 30px;
+  }
+  .cta-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .btn{
+    display:inline-flex;align-items:center;gap:9px;
+    padding:12px 22px;border-radius:11px;
+    font-size:14.5px;font-weight:600;
+    border:1px solid transparent;
+    transition:transform .12s,box-shadow .18s,background .18s,border-color .18s;
+  }
+  .btn.primary{
+    background:linear-gradient(135deg,var(--accent),#cc863f);
+    color:#26180a;
+    box-shadow:0 8px 24px rgba(224,164,90,.22);
+  }
+  .btn.primary:hover{transform:translateY(-1px);box-shadow:0 12px 30px rgba(224,164,90,.3);}
+  .btn.ghost{
+    background:var(--panel);
+    border-color:var(--line);
+    color:var(--txt);
+  }
+  .btn.ghost:hover{background:var(--panel-2);border-color:#33405280;}
+  .hint{font-size:12.5px;color:var(--txt-faint);}
+
+  /* ---------- 区块 ---------- */
+  section{padding:34px 0;}
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:18px;}
+  h2{margin:0;font-size:19px;font-weight:680;letter-spacing:.2px;}
+  .sec-head .note{font-size:12.5px;color:var(--txt-faint);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px;}
+
+  .card{
+    display:flex;flex-direction:column;
+    background:linear-gradient(180deg,var(--panel) 0%,var(--bg-soft) 100%);
+    border:1px solid var(--line-soft);
+    border-radius:var(--radius);
+    padding:20px 20px 18px;
+    transition:border-color .18s,transform .18s;
+  }
+  .card:hover{border-color:#334052;transform:translateY(-2px);}
+  .card.featured{border-color:rgba(224,164,90,.34);}
+  .card-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .card-ico{
+    width:32px;height:32px;border-radius:9px;
+    display:grid;place-items:center;font-size:16px;
+    background:var(--panel-2);border:1px solid var(--line);
+  }
+  .card.featured .card-ico{
+    background:var(--accent-soft);
+    border-color:rgba(224,164,90,.32);
+  }
+  .card h3{margin:0;font-size:15.5px;font-weight:650;}
+  .tag{
+    margin-left:auto;font-size:11px;padding:3px 9px;border-radius:999px;
+    border:1px solid var(--line);color:var(--txt-faint);white-space:nowrap;
+  }
+  .tag.hot{color:var(--accent);border-color:rgba(224,164,90,.35);background:var(--accent-soft);}
+  .card p{margin:0 0 14px;color:var(--txt-dim);font-size:13.5px;}
+  .card .go{
+    margin-top:auto;
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:13.5px;font-weight:600;color:var(--accent-2);
+  }
+  .card .go:hover{color:#a5c9ff;}
+  .card .go .arrow{transition:transform .15s;}
+  .card:hover .go .arrow{transform:translateX(3px);}
+  .path{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11.5px;color:var(--txt-faint);
+    margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-soft);
+    word-break:break-all;
+  }
+
+  /* ---------- 文档列表 ---------- */
+  .doclist{display:flex;flex-direction:column;gap:10px;}
+  .doc{
+    display:flex;align-items:center;gap:12px;
+    padding:13px 16px;
+    background:var(--panel);
+    border:1px solid var(--line-soft);
+    border-radius:11px;
+    transition:background .15s,border-color .15s;
+  }
+  .doc:hover{background:var(--panel-2);border-color:#334052;}
+  .doc .k{
+    font-size:11px;letter-spacing:.4px;
+    color:var(--txt-faint);
+    border:1px solid var(--line);border-radius:6px;
+    padding:2px 7px;white-space:nowrap;
+  }
+  .doc .t{font-size:14px;}
+  .doc .arrow{margin-left:auto;color:var(--txt-faint);}
+
+  /* ---------- 页脚 ---------- */
+  footer{
+    border-top:1px solid var(--line-soft);
+    padding:20px 0 0;
+    color:var(--txt-faint);
+    font-size:12.5px;
+    display:flex;gap:14px;flex-wrap:wrap;align-items:center;
+  }
+  footer .spacer{flex:1;}
+
+  @media (max-width:640px){
+    .topbar{padding:12px 16px;}
+    .wrap{padding:0 16px 56px;}
+    .hero{padding:40px 0 26px;}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ===== 导航栏 ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">F</div>
+      <div>
+        <div class="name">FactEasy</div>
+        <div class="sub">事实核查工作台</div>
+      </div>
+    </div>
+    <div class="tb-spacer"></div>
+    <nav class="mainnav" aria-label="主导航">
+      <a href="index.html" class="here">首页</a>
+      <a href="videos.html">视频列表</a>
+      <a href="pages/sync-player.html" class="video-link">▶ 视频同步阅读器</a>
+      <a href="analysis/video-viewpoints/viewpoints.md">观点数据</a>
+      <a href="#docs">研究文档</a>
+      <a href="https://github.com/dbsquared/facteasy" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+
+  <div class="wrap">
+
+    <!-- ===== Hero ===== -->
+    <section class="hero">
+      <div class="eyebrow">● 视频事实核查 · 能力演示</div>
+      <h1>看视频的同时，<em>把话说清楚</em></h1>
+      <p class="lede">
+        FactEasy 面向病毒式传播的视频、Vlog 与播客，把长内容切成可核验的观点单元，
+        标注时间区间、识别插入广告，并让补充说明跟着播放进度同步呈现。
+      </p>
+      <div class="cta-row">
+        <a class="btn primary" href="pages/sync-player.html">
+          ▶ 进入视频页面
+        </a>
+        <a class="btn ghost" href="analysis/video-viewpoints/viewpoints.md">
+          查看观点数据
+        </a>
+        <span class="hint">左侧播放器 · 右侧随进度切换内容</span>
+      </div>
+    </section>
+
+    <!-- ===== 主要内容区域 ===== -->
+    <section id="pages">
+      <div class="sec-head">
+        <h2>页面与数据</h2>
+        <span class="note">点击卡片进入</span>
+      </div>
+
+      <div class="grid">
+
+        <!-- 主推：视频同步阅读器 -->
+        <a class="card featured" href="pages/sync-player.html">
+          <div class="card-top">
+            <div class="card-ico">▶</div>
+            <h3>视频同步阅读器</h3>
+            <span class="tag hot">主推</span>
+          </div>
+          <p>
+            左侧嵌入 B 站播放器，右侧内容随播放进度自动切换：章节高亮、要点逐条点亮，
+            支持打点校正、倍速、跳段与本地视频精确同步模式。
+          </p>
+          <span class="go">打开页面 <span class="arrow">→</span></span>
+          <div class="path">pages/sync-player.html</div>
+        </a>
+
+        <!-- 观点切分数据 -->
+        <a class="card" href="analysis/video-viewpoints/viewpoints.md">
+          <div class="card-top">
+            <div class="card-ico">☰</div>
+            <h3>视频观点切分数据</h3>
+            <span class="tag">18 个观点</span>
+          </div>
+          <p>
+            基于音频转写对视频做语义切分的原始产出：18 个观点的时间码、摘要与广告检测结论，
+            附带 JSON 结构化版本与可复用的生成脚本。
+          </p>
+          <span class="go">查看数据 <span class="arrow">→</span></span>
+          <div class="path">analysis/video-viewpoints/viewpoints.md</div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- ===== 研究文档 ===== -->
+    <section id="docs">
+      <div class="sec-head">
+        <h2>研究文档</h2>
+        <span class="note">Markdown · 浏览器内直接查看</span>
+      </div>
+      <div class="doclist">
+        <a class="doc" href="research/用户研究洞察报告.md">
+          <span class="k">用研</span>
+          <span class="t">FactEasy 用户研究洞察报告</span>
+          <span class="arrow">→</span>
+        </a>
+        <a class="doc" href="research/市场与成本数据简报.md">
+          <span class="k">市场</span>
+          <span class="t">FactEasy 市场与成本数据简报</span>
+          <span class="arrow">→</span>
+        </a>
+        <a class="doc" href="research/竞品分析报告.md">
+          <span class="k">竞品</span>
+          <span class="t">竞品分析报告 · FactEasy</span>
+          <span class="arrow">→</span>
+        </a>
+        <a class="doc" href="research/平台PRD.md">
+          <span class="k">PRD</span>
+          <span class="t">FactEasy 平台产品需求文档</span>
+          <span class="arrow">→</span>
+        </a>
+        <a class="doc" href="analysis/video-viewpoints/viewpoints.md">
+          <span class="k">分析</span>
+          <span class="t">视频观点清单与广告检测结论</span>
+          <span class="arrow">→</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ===== 页脚 ===== -->
+    <footer>
+      <span>FactEasy · 事实核查工作台</span>
+      <span class="spacer"></span>
+      <a href="pages/sync-player.html">视频页面</a>
+      <a href="https://github.com/dbsquared/facteasy" target="_blank" rel="noopener">仓库</a>
+    </footer>
+
+  </div>
+</body>
+</html>

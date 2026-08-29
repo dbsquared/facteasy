@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
-"""生成可交互时间轴 HTML。
+"""生成可交互时间轴 HTML（仅本地使用）。
+
 输入:
   - viewpoints.json : [{id,start,end,title,summary,ad}]  (秒)
   - video 本地 mp4 路径 (file:// 内嵌播放器)
 输出: timeline.html (点击彩条/列表项 -> 播放器跳转到 start)
+
+注意: 产物内嵌的是本地 mp4 的 file:// 绝对路径，仅供本机查看，
+      不适用于 GitHub Pages（浏览器禁止 https 页面加载 file://，
+      且该 mp4 约 134MB，超出 Pages 单文件 100MB 上限）。
+      站点的在线交互版见 ../../pages/sync-player.html。
 """
 import sys, json
 from pathlib import Path

@@ -50,6 +50,14 @@
   .tb-title{font-size:16px;font-weight:650;letter-spacing:.2px;}
   .tb-meta{font-size:12.5px;color:var(--txt-faint);}
   .tb-spacer{flex:1;}
+  .tb-nav{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+  .tb-nav a{
+    font-size:13px;padding:6px 12px;border-radius:9px;
+    border:1px solid var(--line);background:var(--panel);
+    color:var(--txt-dim);transition:background .15s,color .15s,border-color .15s;
+    white-space:nowrap;
+  }
+  .tb-nav a:hover{background:var(--panel-2);color:var(--txt);border-color:#334052;}
   .badge{
     font-size:11.5px;padding:4px 10px;border-radius:999px;
     border:1px solid var(--line);background:var(--panel);color:var(--txt-dim);
@@ -353,6 +361,10 @@
     <div class="tb-meta">UP 主：山河有声 · 合集《清及近现代史》 · 总时长 <span id="durLabel">20:14</span></div>
   </div>
   <div class="tb-spacer"></div>
+  <nav class="tb-nav" aria-label="站点导航">
+    <a href="../index.html">← 首页</a>
+    <a href="../videos.html">视频列表</a>
+  </nav>
   <span class="badge" id="modeBadge">B 站在线 · 估算同步</span>
   <span class="badge" id="syncBadge">未开始</span>
 </header>
