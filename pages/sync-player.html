@@ -1057,7 +1057,27 @@
     }
   }catch(e){}
 
+  // URL 参数 ?t=456 或 ?t=7:36 —— 优先级高于本地记忆，用于从外部页面深链跳转
+  let jumpedFromUrl = false;
+  try{
+    const q = new URLSearchParams(location.search).get('t');
+    if(q !== null && q !== ''){
+      let sec;
+      if(String(q).indexOf(':') !== -1){
+        const p = String(q).split(':');
+        sec = (parseInt(p[0], 10) || 0) * 60 + (parseFloat(p[1]) || 0);
+      }else{
+        sec = parseFloat(q);
+      }
+      if(!isNaN(sec)){ S.t = clamp(sec, 0, S.dur); jumpedFromUrl = true; }
+    }
+  }catch(e){}
+
   render(true);
+  if(jumpedFromUrl){
+    if(S.mode === 'iframe' && S.reload) loadFrame(S.t, false);
+    toast('已跳转到 ' + fmt(S.t));
+  }
   requestAnimationFrame(tick);
 
   window.addEventListener('beforeunload', save);

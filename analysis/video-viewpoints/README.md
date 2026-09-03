@@ -16,7 +16,36 @@
 |------|------|
 | `viewpoints.md` | 时间码 + 一句话摘要的观点清单，含广告检测结论（最便携，推荐先读） |
 | `viewpoints.json` | 结构化数据（18 个观点 + 时间区间），便于二次处理 / 接入产品 |
+| `credibility.md` | **18 条观点的可信度逐条评估报告**（来源性质三分 + 权威层级 + 证据强度 + 评级） |
+| `credibility.json` | 上述评估的机器可读版本，字段与 `viewpoints.json` 的 `id` 一一对应 |
+| `credibility.html` | **评估报告的交互版页面**（生成到 `pages/credibility.html`，数据与 `credibility.json` 内联，可离线打开） |
 | `build_timeline.py` | 时间轴生成脚本（输入 `viewpoints.json` + 视频路径，方法可复用） |
+| `build_credibility_page.py` | 评估页生成脚本（输入 `credibility.json` → 输出 `pages/credibility.html`） |
+| `build_credibility_md.py` | 评估报告生成脚本（输入 `credibility.json` → 输出 `credibility.md`；**md 由脚本生成，勿手改**） |
+| `extract_quote.py` | 从 Whisper 逐字稿按时间区间抽取每条观点的原文（`quote.segments`） |
+| `rebuild_credibility_data.py` | 数据重构脚本：三标签化 + 补出处/根据 + 灌原文与勘误（一次性迁移，已执行） |
+| `_smoke_check.py` | 生成页的冒烟检查（JS 语法 / 挂载点 / 数据结构自检 / 标签配对 / 相对路径） |
+| `_smoke_runtime.js` | 运行时冒烟：DOM 桩执行页内脚本，覆盖渲染 / 评级筛选 / 多标签筛选 / 仅关键句 |
+
+### 可信度评估（第二阶段）
+
+切分只是第一步，切出来的每条观点还要回答三个问题：**这是转述还是原创？出处在哪？证据撑不撑得住结论？**
+
+`credibility.md` 对每个观点按统一模板给出：**原文逐字稿**（关键句高亮 + ASR 勘误）→ **来源性质判定**（`转述` / `专属` / `原创` 三标签，可并存）→ **出处与根据**（编号 S1… + 类型 + 权威层级 T0–T4 + 核验状态）→ 可靠程度 / 时效性 / 适用范围 → 关联强度 → 成立环节 → 疑点与证据不足（每条论点标注 `根据` 与引用编号）→ 综合评级（A/B/C/D/N-A）。
+
+三标签的含义：
+
+| 标签 | 含义 |
+|------|------|
+| `转述` | 内容可在外部权威来源找到，作者只是复述或转译 |
+| `专属` | 该说法/选材/措辞只见于本视频（作者独有），但仍是可证伪的事实性断言 |
+| `原创` | 作者自行建构的解释框架、归因、价值判断，不可或难以直接证伪 |
+
+原「兼有」一类已一律拆为 `专属 + 原创` 两个标签。
+
+**关键结论**：主干命题（"介石"是字、"中正"是名、Chiang Kai-shek 锁定的是字、大陆用字而台湾用名）**全部成立且证据充分**；
+但支撑"称名 = 冒犯"的几个关键故事（杜甫严武、观世音避讳、刘文典引语）分别存在**史料冲突、硬反证与无据引用**，
+三处归因（无人操盘 / 本能避讳 / 配不上中正）**彼此冲突**。详见 `credibility.md` 的"五处需要修正的具体问题"与"两处内部矛盾"。
 
 > **交互展示已迁移**：这 18 个观点已内联进站点的 `pages/sync-player.html`
 > （左侧 B 站播放器 + 右侧随进度联动），原先的 `timeline.html` 因依赖本地
@@ -39,6 +68,18 @@
 ## 查看方式
 
 - **最便携**：直接读 `viewpoints.md`，含完整时间码清单与广告结论。
+- **想看靠不靠谱**：打开站点的 `../../pages/credibility.html`，18 条观点逐条评级，支持按评级/性质筛选、全文检索、逐条展开；
+  卡片上的时间码可点击，直接跳到 `sync-player.html` 对应位置（同步阅读器支持 `?t=` 参数）。
+- **纯文本版**：`credibility.md`（内容一致，机器可读版见 `credibility.json`）。
+
+**重新生成评估页**（改完 `credibility.json` 后）：
+
+```bash
+python build_credibility_page.py   # → ../../pages/credibility.html
+python build_credibility_md.py     # → ./credibility.md
+python _smoke_check.py             # 冒烟检查：JS 语法 / 挂载点 / 数据结构自检 / 标签配对 / 相对路径
+node _smoke_runtime.js             # 运行时冒烟：渲染 / 筛选 / 仅关键句
+```
 - **可交互**：打开站点的 `../../pages/sync-player.html`，左侧播 B 站视频、右侧内容随进度联动，18 个观点按时间轴高亮。
 - **本地生成时间轴（可选）**：`python build_timeline.py` 会基于 `viewpoints.json` 生成一份 `timeline.html`，
   它内嵌的是**本地 mp4 绝对路径**，仅供本地查看，不适用于 GitHub Pages。
