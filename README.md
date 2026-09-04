@@ -15,7 +15,9 @@
 | `404.html` | 自定义 404 页 |
 | `.nojekyll` | 跳过 Jekyll 构建，纯静态直出 |
 | `pages/` | 站点子页面 |
-| `pages/sync-player.html` | 视频同步阅读器：左侧 B 站播放器，右侧内容随进度联动 |
+| `pages/sync-player.html` | 视频同步阅读器：左侧 B 站播放器，右侧内容随进度联动，**内嵌事实核查面板** |
+| `pages/credibility.html` | 观点可信度逐条评估（独立完整版） |
+| `pages/facteasy-data.js` | 共享数据层：观点 + 核查结果，由脚本生成，供上述两页共用 |
 | `research/` | 研究与产品文档（Markdown） |
 | `analysis/video-viewpoints/` | 视频观点切分与广告识别的分析数据与方法脚本 |
 
@@ -56,7 +58,23 @@ const VIDEOS = [
 ];
 ```
 
+## 重新生成共享数据
+
+`pages/facteasy-data.js` 是**生成物**，不要手改。改完 `analysis/video-viewpoints/` 下的
+`viewpoints.json` 或 `credibility.json` 后执行：
+
+```bash
+cd analysis/video-viewpoints
+python build_site_data.py        # → ../../pages/facteasy-data.js
+python build_credibility_page.py # → ../../pages/credibility.html
+python build_credibility_md.py   # → ./credibility.md
+```
+
+同步阅读器与可信度报告两页共用这一份数据，因此改一次两边同时生效。
+
 ## 已知限制
 
 - **B 站播放器依赖 iframe 嵌入**：`pages/sync-player.html` 通过 iframe 加载 B 站官方播放器。部分内嵌预览环境（如某些 IDE 的静态预览面板）会拦截外部 iframe，此时页面会给出「在新标签页打开」与「无视频计时」两种兜底方式。
-- **页面内的观点时间戳**：当前视频的 18 个观点时间戳由音频转写 + 语义切分得到，存放于 `analysis/video-viewpoints/viewpoints.json`，并已内联进 `pages/sync-player.html`。
+- **页面内的观点时间戳**：当前视频的 18 个观点时间戳由音频转写 + 语义切分得到，存放于 `analysis/video-viewpoints/viewpoints.json`，经 `build_site_data.py` 生成进 `pages/facteasy-data.js` 供页面读取。
+- **核查面板的进度驱动**：同步阅读器的核查面板跟随页面内的本地时钟切换观点。B 站 iframe 为跨域，无法直接读取播放器进度，因此若用户手动拖动视频进度条，页面会尝试重新定位，但极端网络下可能有 1–2 秒误差。
+- **B 站播放器为懒加载**：`pages/sync-player.html` 打开时**不加载**播放器，需点击「加载 B 站播放器」。这样在会拦截外部 iframe 的环境（部分 IDE 预览面板 / 沙箱）里不会一进来就显示 `This content is blocked`。右侧的观点切分与事实核查不依赖播放器，不加载也能用。已实测 `player.bilibili.com` 响应头**不含** `X-Frame-Options` 与 CSP `frame-ancestors`——B 站官方外链播放器本身不限制嵌入，报错均来自宿主环境。

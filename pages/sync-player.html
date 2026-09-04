@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>视频同步阅读器 · 蒋介石为何被称为「蒋介石」</title>
+<script src="facteasy-data.js"></script>
 <style>
   :root{
     --bg:#0b0e13;
@@ -21,6 +22,10 @@
     --ok:#4ec9a0;
     --warn:#e07a5a;
     --radius:14px;
+    /* 核查评级色（与 credibility.html 一致） */
+    --ga:#4ec9a0; --gb:#7fb2ff; --gc:#e0a45a; --gd:#e8695a; --gn:#8b94a3;
+    /* 性质标签色 */
+    --gt-zhuan:#7fb2ff; --gt-excl:#e0a45a; --gt-orig:#b48ef0;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
@@ -123,6 +128,36 @@
   .buffering.on{display:flex;}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite;}
   @keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
+
+  /* 播放器未加载时的占位层：不主动请求 B 站，避免被拦时直接糊一个报错页 */
+  .poster{
+    position:absolute;inset:0;z-index:7;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;
+    background:
+      radial-gradient(120% 90% at 50% 0%,rgba(224,164,90,.10),transparent 60%),
+      linear-gradient(180deg,#12171f,#0b0e13);
+  }
+  .poster.hide{display:none;}
+  .p-ico{
+    width:66px;height:66px;border-radius:50%;
+    border:1px solid rgba(224,164,90,.35);background:rgba(224,164,90,.10);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .p-ico svg{margin-left:4px;}
+  .p-t{font-size:14.5px;font-weight:600;color:var(--txt);letter-spacing:.4px;}
+  .p-s{
+    max-width:430px;font-size:12.2px;line-height:1.75;color:var(--txt-faint);
+  }
+  .p-s b{color:var(--txt-dim);font-weight:600;}
+  .p-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:4px;}
+  .p-acts .btn{font-size:12.5px;}
+  .p-hint{
+    margin-top:2px;font-size:11.5px;color:var(--txt-faint);opacity:.85;
+  }
+  .p-hint code{
+    padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.06);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;
+  }
 
   /* 无视频计时面板 */
   .manual{
@@ -351,6 +386,132 @@
     background:#171e28;padding:1px 6px;border-radius:5px;
     font-size:11.5px;color:var(--txt-dim);
   }
+
+  /* ==================== 可信度核查集成 ==================== */
+  /* 评级徽章（列表 + 顶部小徽章共用） */
+  .gr-badge{
+    flex:0 0 auto;min-width:22px;text-align:center;
+    font-size:11px;font-weight:700;padding:2px 6px;border-radius:6px;
+    background:var(--panel);border:1px solid var(--line);color:var(--txt-dim);
+    font-variant-numeric:tabular-nums;
+  }
+  .gr-A{background:rgba(78,201,160,.14);color:var(--ga);border-color:rgba(78,201,160,.4);}
+  .gr-B{background:rgba(127,178,255,.14);color:var(--gb);border-color:rgba(127,178,255,.4);}
+  .gr-C{background:rgba(224,164,90,.14);color:var(--gc);border-color:rgba(224,164,90,.4);}
+  .gr-D{background:rgba(232,105,90,.14);color:var(--gd);border-color:rgba(232,105,90,.4);}
+  .gr-N\2f A,.gr-NA{background:rgba(139,148,163,.14);color:var(--gn);border-color:rgba(139,148,163,.4);}
+  .ch-item .gr-badge{display:none;}
+  body.cc-rail .ch-item .gr-badge{display:block;}
+
+  /* 内容卡里的核查行 */
+  .c-cred{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    margin:2px 0 16px;padding:9px 12px;
+    background:linear-gradient(90deg,var(--bg-soft),transparent);
+    border:1px solid var(--line-soft);border-left:3px solid var(--accent);
+    border-radius:10px;font-size:12.5px;
+  }
+  .c-cred .lbl{color:var(--txt-faint);font-size:11px;letter-spacing:.5px;}
+  .c-cred .rating{font-weight:750;font-variant-numeric:tabular-nums;}
+  .c-cred .rating.rA{color:var(--ga);}
+  .c-cred .rating.rB{color:var(--gb);}
+  .c-cred .rating.rC{color:var(--gc);}
+  .c-cred .rating.rD{color:var(--gd);}
+  .c-cred .rating.rN{color:var(--gn);}
+  .c-cred .nats{display:flex;gap:5px;}
+  .c-cred .nat{
+    font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid;
+  }
+  .nat-t{color:var(--gt-zhuan);border-color:rgba(127,178,255,.4);background:rgba(127,178,255,.09);}
+  .nat-x{color:var(--gt-excl);border-color:rgba(224,164,90,.4);background:rgba(224,164,90,.09);}
+  .nat-o{color:var(--gt-orig);border-color:rgba(180,142,240,.4);background:rgba(180,142,240,.09);}
+  .c-cred .open{font-size:12px;}
+  .c-cred .noted{color:var(--txt-faint);font-size:11.5px;margin-left:auto;}
+
+  /* 核查面板（tab 切换） */
+  .ccp{margin:18px 0 0;display:none;}
+  body.cc-open .ccp{display:block;}
+  .ccp-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);}
+  .ccp-tab{
+    font:inherit;font-size:12.5px;cursor:pointer;
+    padding:7px 13px;color:var(--txt-dim);
+    background:transparent;border:0;border-bottom:2px solid transparent;
+    transition:color .15s,border-color .15s;white-space:nowrap;
+  }
+  .ccp-tab:hover{color:var(--txt);}
+  .ccp-tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+  .ccp-pane{display:none;padding:14px 2px 2px;}
+  .ccp-pane.on{display:block;}
+
+  /* 原文 tab */
+  .cc-qt{border:1px solid var(--line-soft);border-radius:11px;overflow:hidden;}
+  .cc-qt .qt-lines{max-height:340px;overflow:auto;padding:6px 0;}
+  .ql{display:flex;gap:10px;align-items:baseline;padding:4px 12px;}
+  .ql .t{
+    flex:0 0 auto;font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:11px;color:var(--txt-faint);width:42px;text-align:right;
+  }
+  .ql .x{flex:1;font-size:13px;color:var(--txt-dim);padding-left:8px;border-left:2px solid transparent;}
+  .ql.key .x{
+    color:var(--txt);border-left-color:var(--accent);
+    background:linear-gradient(90deg,rgba(224,164,90,.11),transparent 70%);
+  }
+  .ql .qfix{display:block;font-size:11px;color:var(--gc);opacity:.9;margin-top:1px;}
+  .ql .qfix::before{content:"勘误：";opacity:.7;}
+  .cc-qt .qt-note{padding:7px 12px;border-top:1px dashed var(--line-soft);font-size:11px;color:var(--txt-faint);}
+  .cc-qt .cc-empty{padding:16px 14px;font-size:12.5px;color:var(--txt-faint);text-align:center;}
+
+  /* 出处 / 论证 tab 通用条目 */
+  .cc-block-title{
+    margin:0 0 8px;font-size:12.5px;font-weight:650;color:var(--txt);
+    display:flex;align-items:center;gap:6px;
+  }
+  .cc-block-title::before{content:"";width:3px;height:12px;border-radius:2px;background:var(--accent);}
+  .cc-block.ok .cc-block-title::before{background:var(--ok);}
+  .cc-block.warn .cc-block-title::before{background:var(--warn);}
+  .cc-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .cc-src,.cc-arg{
+    padding:9px 12px;background:var(--bg-soft);
+    border:1px solid var(--line-soft);border-radius:9px;font-size:12.5px;
+  }
+  .cc-block.ok .cc-arg{border-left:2px solid rgba(78,201,160,.5);}
+  .cc-block.warn .cc-arg{border-left:2px solid rgba(224,164,90,.5);}
+  .cc-src .top,.cc-arg .aclaim{display:flex;gap:7px;align-items:baseline;}
+  .cc-sid{
+    flex:0 0 auto;font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:10.5px;color:var(--accent);border:1px solid rgba(224,164,90,.3);
+    background:var(--accent-soft);padding:0 6px;border-radius:4px;
+  }
+  .cc-slab,.cc-arg .t{flex:1;color:var(--txt);font-weight:600;font-size:12.5px;}
+  .cc-sm{
+    display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;
+    font-size:10.5px;color:var(--txt-faint);
+  }
+  .cc-sm span{background:var(--panel-2);border:1px solid var(--line);padding:0 6px;border-radius:4px;}
+  .cc-sm .hier{color:var(--gb);}
+  .cc-arg .abas{margin-top:5px;color:var(--txt-dim);font-size:12px;}
+  .cc-arg .abas b{color:var(--txt-faint);font-weight:400;}
+  .cc-arg .ameta{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;align-items:center;}
+  .cc-ref{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;
+    color:var(--accent-2);border:1px solid var(--line);background:var(--panel);
+    padding:0 6px;border-radius:4px;
+  }
+  .cc-tag{font-size:10.5px;padding:0 7px;border-radius:5px;border:1px solid;}
+  .cc-tag.t{color:var(--gt-zhuan);border-color:rgba(127,178,255,.35);}
+  .cc-tag.x{color:var(--gt-excl);border-color:rgba(224,164,90,.35);}
+  .cc-tag.o{color:var(--gt-orig);border-color:rgba(180,142,240,.35);}
+  .cc-warnbox{
+    padding:8px 12px;border-radius:9px;font-size:12.5px;margin-bottom:10px;
+    border:1px solid;border-left:3px solid;
+  }
+  .cc-warnbox b{display:block;margin-bottom:2px;}
+  .cc-warnbox.none{color:var(--ok);border-color:rgba(78,201,160,.35);border-left-color:var(--ok);background:rgba(78,201,160,.07);}
+  .cc-warnbox.hint{color:var(--txt-faint);border-color:var(--line);border-left-color:var(--gc);background:var(--panel);}
+  .cc-noteit{margin-top:10px;font-size:12px;color:var(--txt-faint);background:var(--panel);border:1px solid var(--line-soft);border-radius:8px;padding:8px 11px;}
+
+  /* 无核查数据的观点 */
+  .c-cred.na .rating{color:var(--txt-faint);font-weight:600;}
 </style>
 </head>
 <body>
@@ -367,6 +528,7 @@
   </nav>
   <span class="badge" id="modeBadge">B 站在线 · 估算同步</span>
   <span class="badge" id="syncBadge">未开始</span>
+  <button class="btn" id="btnCred" style="font-size:12.5px;padding:6px 13px" title="随播放切换当前观点的事实核查面板">核查面板 · 开</button>
 </header>
 
 <main class="layout">
@@ -374,11 +536,34 @@
   <section>
     <div class="card player-card">
       <div class="video-box" id="videoBox">
+        <!-- B 站 iframe 采用懒加载：页面打开时不发请求，用户点击后才注入 src。
+             这样在会拦截外部 iframe 的环境（部分预览面板 / 沙箱）里，
+             不会一进来就糊一个 "This content is blocked"。 -->
         <iframe id="biliFrame"
-          src="https://player.bilibili.com/player.html?bvid=BV1mQuC6fEFz&cid=40830764747&p=1&high_quality=1&danmaku=0&autoplay=0&t=0"
+          src="about:blank"
+          data-src="https://player.bilibili.com/player.html?bvid=BV1mQuC6fEFz&cid=40830764747&p=1&high_quality=1&danmaku=0"
           scrolling="no" frameborder="0"
           allow="autoplay; fullscreen; encrypted-media"
           allowfullscreen="true" title="B站播放器"></iframe>
+        <div class="poster" id="poster">
+          <div class="p-ico">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="#e0a45a"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          <div class="p-t">视频播放器未加载</div>
+          <div class="p-s">
+            右侧的<b>观点切分与事实核查</b>不依赖播放器，现在就能直接看。
+            需要跟着视频走时再点下面加载 —— 加载会向 <b>player.bilibili.com</b> 发请求。
+          </div>
+          <div class="p-acts">
+            <button class="btn primary" id="btnPosterLoad">加载 B 站播放器</button>
+            <button class="btn ghost" id="btnPosterTab">在新标签页打开</button>
+            <button class="btn ghost" id="btnPosterManual">改用无视频计时</button>
+          </div>
+          <div class="p-hint">
+            若加载后显示 <code>This content is blocked</code>，说明是<b>当前预览环境</b>拦了外部嵌入
+            —— B 站官方外链播放器本身<b>不限制</b>被嵌入。换普通浏览器打开或部署到 GitHub Pages 即正常。
+          </div>
+        </div>
         <div class="manual" id="manualPanel">
           <div class="m-cap">无视频计时模式</div>
           <div class="m-time" id="mTime">00:00</div>
@@ -435,7 +620,7 @@
       </div>
 
       <div class="embed-tip" id="embedTip">
-        <span>播放器是空白或显示「<b>content is blocked</b>」？那是当前预览环境拦了外部 iframe，不是页面坏了 ——</span>
+        <span>播放器加载后若显示「<b>content is blocked</b>」，那是当前预览环境拦了外部 iframe，不是页面坏了 ——</span>
         <button class="btn ghost" id="btnOpenTab">在新标签页打开（接着当前时间）</button>
         <button class="btn ghost" id="btnManual2">改用无视频计时</button>
         <button class="btn ghost" id="btnHideTip">隐藏</button>
@@ -458,7 +643,7 @@
 
   <!-- ============ 右：随进度变化的内容 ============ -->
   <aside class="stage">
-    <div class="card content">
+    <div class="card content" id="contentCard">
       <div class="c-top">
         <span class="c-index" id="cIndex">观点 01</span>
         <span class="c-range" id="cRange">00:00 – 00:56</span>
@@ -466,7 +651,21 @@
       </div>
       <div class="c-bar"><i id="cBar" style="width:0%"></i></div>
       <h2 class="c-title" id="cTitle">—</h2>
+      <div class="c-cred" id="cCred" style="display:none"></div>
       <div class="c-summary" id="cSummary"></div>
+
+      <!-- 核查面板：随当前观点联动（tab：原文 / 出处 / 论证） -->
+      <div class="ccp" id="ccp">
+        <div class="ccp-tabs">
+          <button class="ccp-tab on" data-tab="qt">原文逐字稿</button>
+          <button class="ccp-tab" data-tab="src">出处与根据</button>
+          <button class="ccp-tab" data-tab="arg">论证</button>
+        </div>
+        <div class="ccp-pane on" id="ccp-qt"></div>
+        <div class="ccp-pane" id="ccp-src"></div>
+        <div class="ccp-pane" id="ccp-arg"></div>
+      </div>
+
       <div class="tags" id="cTags"></div>
       <div class="c-next">
         <span>下一个观点：<b id="cNextName">—</b></span>
@@ -482,8 +681,11 @@
   开启「重载定位」后，播放/暂停/跳转都会用 <code>&amp;t=秒数</code> 重新加载播放器，时间点精确不漂移，代价是约 1–2 秒缓冲；
   若你在播放器内部自行拖动/暂停，点「对齐时间」或按 <code>C</code> 输入播放器上的时间即可纠偏。
   如需逐帧精确同步，点「本地视频（精确）」载入本地 <code>.mp4</code>，将切换为原生播放器，进度 100% 精确。<br>
-  <b>播放器区域显示「This content is blocked」怎么办？</b>某些预览面板 / 沙箱 / 内网环境会拦截外部 iframe（B 站本身并未限制嵌入，其响应头不含 <code>X-Frame-Options</code> 与 CSP <code>frame-ancestors</code>）。
-  此时可点「在新标签页打开（接着当前时间）」，或切到「无视频计时」——右侧内容照样按时间线切换。
+  <b>为什么播放器默认是空的？</b>本页对 B 站 iframe 做了<b>懒加载</b>：打开时不发任何外部请求，只有你点了「加载 B 站播放器」才会真正载入。
+  这样在会拦截外部嵌入的环境里，不会一进来就糊一张报错页；而且右侧的观点切分与事实核查<b>完全不依赖播放器</b>，不加载也能看。<br>
+  <b>加载后显示「This content is blocked」怎么办？</b>这表示是<b>当前预览环境</b>（某些 IDE 预览面板 / 沙箱 / 内网）拦了外部 iframe，不是页面坏了，也<b>不是 B 站在拦</b>
+  —— 已实测 <code>player.bilibili.com</code> 的响应头不含 <code>X-Frame-Options</code> 与 CSP <code>frame-ancestors</code>，其官方外链播放器本就是供嵌入使用的。
+  此时点「改用无视频计时」即可（播放器区域会被整体覆盖，右侧内容照样按时间线切换），或在系统浏览器打开本页 / 访问已部署的 GitHub Pages 版本，播放器即正常。
 </div>
 
 <!-- 对齐弹窗 -->
@@ -507,13 +709,26 @@
   'use strict';
 
   /* =======================================================
+     0. 站点共享数据：viewpoints + credibility（由 build_site_data.py 生成）
+        → pages/facteasy-data.js（<head> 里引入）。时间码以 viewpoints 为准。
+     ======================================================= */
+  const DATA = (window.FACTEASY_DATA && window.FACTEASY_DATA.viewpoints) ? window.FACTEASY_DATA : null;
+  const CRED = DATA ? DATA.credibility : null;
+  const CRED_BY_ID = {};
+  if(CRED) CRED.items.forEach(it => { CRED_BY_ID[it.id] = it; });
+
+  /* =======================================================
      1. 内容数据：改这里就能换整页内容
      结构：{ t: 起始秒, title, sub, quote:{text,from}, points:[...], tags:[...] }
      ======================================================= */
   /* 观点数据：由语音转写 + 语义切分得到（共 18 个观点，无插入广告）。
      结构：{ t: 起始秒, end: 结束秒, ad: 是否广告段, title, summary }
-     说明：summary 为该观点的完整摘要，取代原「段落·要点」式辅助阅读。 */
-  const DEFAULT_CHAPTERS = [
+     说明：summary 为该观点的完整摘要，取代原「段落·要点」式辅助阅读。
+     优先用共享数据（pages/facteasy-data.js，与 credibility 同源、时间码一致）；
+     仅当数据文件缺失（如离线误删）时回退到内置副本。 */
+  const DEFAULT_CHAPTERS = DATA ? DATA.viewpoints.map(v => ({
+    t: v.start, end: v.end, ad: !!v.ad, title: v.title, summary: v.summary
+  })) : [
     { t:0.0,    end:56.9,   ad:false, title:'引子：2008年“常凯申”误译风波',
       summary:'某高校学者把英文著作里的人名 Chiang Kai-shek 按粤语韦氏拼音直译作“常凯申”，闹出笑话，顺带点出“介石”是粤语发音的转写。' },
     { t:56.9,   end:79.0,   ad:false, title:'抛出核心问题：介石是字、中正是名，大陆为何偏叫“蒋介石”',
@@ -548,15 +763,23 @@
       summary:'1949后“字”随跪拜礼被归入封建糟粕，户口只留“姓名”一栏；香港身份证仍标“字某”。两千年名/字并行体系在几十年内从集体记忆蒸发，年轻人看古装剧要靠字幕认角色。' },
     { t:1077.4, end:1186.0, ad:false, title:'刘文典轶事：为一个称呼差点入狱',
       summary:'1928年安徽大学校长刘文典（章太炎弟子）被蒋介石直呼其名“刘文典”，当场回怼“名是父母长辈教的，不是阿猫阿狗能叫的”，两人吵翻，刘被关押，经蔡元培等斡旋才脱险——称名称字在彼时界定尊卑亲疏。' },
-    { t:1186.0, end:1213.0, ad:false, title:'收尾点题：叫“介石”非因尊重，而是他配不上“中正”',
+    { t:1186.0, end:1213.0, ad:false, id:18, title:'收尾点题：叫“介石”非因尊重，而是他配不上“中正”',
       summary:'十三亿大陆人叫他字“介石”，绝非尊崇——是觉得他实在不配“中正”二字；兼安徽江淮方言“介石”有“脾气差”之意，结尾以方言梗收束并致谢。' }
   ];
+
+  /* 章节 ↔ 核查条目（按 id 1..18 对齐）。导入/打点只改 t，id 保持稳定。 */
+  const VP_IDS = DEFAULT_CHAPTERS.map((c, k) => {
+    if(c.id) return c.id;
+    // 兜底：用所在下标对齐 1..18（仅当内置回退且副本缺 id 时）
+    return k + 1;
+  });
 
   const BV = 'BV1mQuC6fEFz';
   const CID = '40830764747';
   const FRAME_BASE = 'https://player.bilibili.com/player.html?bvid=' + BV +
                      '&cid=' + CID + '&p=1&high_quality=1&danmaku=0';
   const LS_KEY = 'bilisync:' + BV;
+  const LS_UI_KEY = 'bilisync-ui:' + BV;   // 核查面板显隐 + 活动 tab（独立记忆）
   const DEFAULT_DUR = 1214; // 20:14
 
   /* =======================================================
@@ -595,11 +818,38 @@
     }catch(e){}
   }
 
+  /* ---- 核查面板 UI 偏好（显隐 + 活动 tab）---- */
+  const UI_PREFS = { open: true, tab: 'qt' };
+  function loadUiPrefs(){
+    try{
+      const d = JSON.parse(localStorage.getItem(LS_UI_KEY));
+      if(d){
+        if(typeof d.open === 'boolean') UI_PREFS.open = d.open;
+        if(['qt','src','arg'].indexOf(d.tab) !== -1) UI_PREFS.tab = d.tab;
+      }
+    }catch(e){}
+  }
+  function saveUiPrefs(){
+    try{ localStorage.setItem(LS_UI_KEY, JSON.stringify(UI_PREFS)); }catch(e){}
+  }
+  function applyPanelUI(){
+    document.body.classList.toggle('cc-open', UI_PREFS.open);
+    document.body.classList.toggle('cc-rail', UI_PREFS.open);
+    const b = $('btnCred');
+    b.textContent = '核查面板 · ' + (UI_PREFS.open ? '开' : '关');
+    b.classList.toggle('on', UI_PREFS.open);
+    document.querySelectorAll('.ccp-tab').forEach(tb =>
+      tb.classList.toggle('on', tb.dataset.tab === UI_PREFS.tab));
+    ['qt','src','arg'].forEach(t =>
+      document.getElementById('ccp-' + t).classList.toggle('on', t === UI_PREFS.tab));
+  }
+
   /* =======================================================
      3. DOM
      ======================================================= */
   const $ = id => document.getElementById(id);
   const frame = $('biliFrame'), veil = $('veil'), bufTip = $('bufTip'), box = $('videoBox');
+  const poster = $('poster');
   const track = $('track'), fill = $('fill'), knob = $('knob');
   const el = {
     tCur:$('tCur'), tDur:$('tDur'), tCh:$('tCh'), tChAll:$('tChAll'), tState:$('tState'),
@@ -652,7 +902,26 @@
      5. 播放器驱动
      ======================================================= */
   let bufTimer;
-  function loadFrame(t, autoplay){
+
+  /* 播放器懒加载：未 arm 之前不发任何请求。
+     目的：会拦外部 iframe 的环境里，页面打开时不会直接糊一张报错页。 */
+  let frameArmed = false;
+  function armFrame(){
+    if(frameArmed) return;
+    frameArmed = true;
+    poster.classList.add('hide');
+  }
+  function disarmFrame(){
+    frameArmed = false;
+    frame.src = 'about:blank';
+    poster.classList.remove('hide');
+  }
+
+  function loadFrame(t, autoplay, opts){
+    opts = opts || {};
+    // lazy=true（默认）：未 arm 时直接跳过，不触发网络请求
+    if(!frameArmed && !opts.force) return;
+    if(!frameArmed && opts.force) armFrame();
     const url = FRAME_BASE + '&autoplay=' + (autoplay?1:0) + '&t=' + Math.floor(t);
     if(frame.src !== url){
       frame.src = url;
@@ -667,7 +936,7 @@
     if(S.mode === 'local' && localVideo){
       try{ localVideo.currentTime = S.t; }catch(e){}
     }else if(S.mode === 'iframe' && (opts.force || S.reload)){
-      loadFrame(S.t, S.playing);
+      loadFrame(S.t, S.playing, {force:true});
     }
     render(true); save();
   }
@@ -676,7 +945,7 @@
     if(S.mode === 'local' && localVideo){
       S.playing ? localVideo.play().catch(()=>{}) : localVideo.pause();
     }else if(S.mode === 'iframe'){
-      if(S.reload) loadFrame(S.t, S.playing);
+      if(S.reload) loadFrame(S.t, S.playing, {force:true});
       else if(S.playing) toast('视频已在播放？若右侧不同步，按 C 对齐时间');
     }
     veil.classList.add('hide');
@@ -693,6 +962,7 @@
       frame.style.display = 'none';
       if(localVideo) localVideo.style.display = 'none';
       panel.classList.add('on');
+      poster.classList.add('hide');
       veil.classList.add('hide');
       $('btnManual').classList.add('on');
       $('btnLocal').classList.remove('on');
@@ -712,10 +982,11 @@
       S.mode = 'iframe';
       frame.style.display = '';
       panel.classList.remove('on');
+      poster.classList.add('hide');
       $('btnManual').classList.remove('on');
       el.modeBadge.className = 'badge';
       el.modeBadge.textContent = 'B 站在线 · 估算同步';
-      loadFrame(S.t, S.playing);
+      loadFrame(S.t, S.playing, {force:true});
     }
     render(true); save();
   }
@@ -787,10 +1058,135 @@
         node.classList.toggle('active', k === i);
         node.classList.toggle('done', k < i);
       });
+      renderCred(i);           // 核查行 + 面板随当前观点切换
     }
 
     /* --- 观点为整体摘要，无需逐条点亮 --- */
   }
+
+  /* =======================================================
+     7b. 可信度核查渲染（随当前观点联动）
+     ======================================================= */
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+  const REF_LABEL = { 'Q': '本视频逐字稿（见「原文」页）', 'L': '逻辑推演' };
+
+  /* 章节序号 → 核查条目 id（1..18）。章节下标与 id 同序，直接 +1。 */
+  function credIdFor(k){
+    const fallback = k + 1;
+    const raw = (S.chapters[k] && (S.chapters[k].id != null)) ? S.chapters[k].id : fallback;
+    return Number(raw) || fallback;
+  }
+
+  /* 评级：复合串（如「事实 A / 动机解读 C」）取最弱环节，A<B<C<D<N/A */
+  function worstGrade(rating){
+    const letters = String(rating || '').replace(/N\/A/g, '').match(/[ABCD]/g);
+    if(!letters) return 'N/A';
+    const order = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
+    return letters.sort((a, b) => order[a] - order[b]).pop();
+  }
+  function natCls(t){ return t === '转述' ? 'nat-t' : (t === '专属' ? 'nat-x' : 'nat-o'); }
+  function tagCls(t){ return t === '转述' ? 't' : (t === '专属' ? 'x' : 'o'); }
+
+  function renderCred(i){
+    const it = CRED_BY_ID[credIdFor(i)];
+    const credBox = $('cCred');
+    const panes = { qt: $('ccp-qt'), src: $('ccp-src'), arg: $('ccp-arg') };
+
+    // —— 核查行（评级 + 性质 + 展开按钮）——
+    if(!it){
+      credBox.style.display = '';
+      credBox.className = 'c-cred na';
+      credBox.innerHTML = '<span class="lbl">核查</span>' +
+        '<span class="rating">本段无核查数据</span>' +
+        '<span class="noted">见独立 <a href="credibility.html" target="_blank" rel="noopener">可信度报告</a></span>';
+      panes.qt.innerHTML = panes.src.innerHTML = panes.arg.innerHTML =
+        '<div class="cc-empty">本观点暂无核查数据。完整评估见 <a href="credibility.html" target="_blank" rel="noopener">可信度报告</a>。</div>';
+      return;
+    }
+    const wg = worstGrade(it.rating);
+    const natHtml = (it.natures || []).map(n =>
+      '<span class="nat ' + natCls(n) + '">' + esc(n) + '</span>').join('');
+    credBox.style.display = '';
+    credBox.className = 'c-cred';
+    credBox.innerHTML = '' +
+      '<span class="lbl">核查</span>' +
+      '<span class="rating r' + (wg[0] === 'N' ? 'N' : wg) + '">评级 ' + esc(it.rating) + '</span>' +
+      (natHtml ? '<span class="nats">' + natHtml + '</span>' : '') +
+      '<span class="open" title="打开独立可信度报告页"><a href="credibility.html" target="_blank" rel="noopener">↗ 完整报告</a></span>' +
+      (it.tier ? '<span class="noted">权威 ' + esc(it.tier) + '</span>' : '');
+
+    // —— 「原文」tab ——
+    const segs = (it.quote && it.quote.segments) || [];
+    if(segs.length){
+      const st = it.quote.stats || {};
+      panes.qt.innerHTML = '<div class="cc-qt"><div class="qt-lines">' +
+        segs.map(s =>
+          '<div class="ql' + (s.key ? ' key' : '') + '">' +
+            '<span class="t">' + fmt(s.t) + '</span>' +
+            '<span class="x">' + esc(s.text) +
+              (s.fix ? '<span class="qfix">' + esc(s.fix) + '</span>' : '') +
+            '</span></div>').join('') +
+        '</div>' +
+        (it.quote.note ? '<div class="qt-note">' + esc(it.quote.note) + '</div>' : '') +
+        '</div>' +
+        '<div class="cc-noteit">⭐ 高亮为本观点关键句 · 逐字稿由 Whisper 转写，同音讹误以「勘误」标注。</div>';
+    }else{
+      panes.qt.innerHTML = '<div class="cc-empty">无原文数据。</div>';
+    }
+
+    // —— 「出处」tab ——
+    const srcs = it.sources || [];
+    panes.src.innerHTML = srcs.length
+      ? '<div class="cc-list">' + srcs.map(s =>
+          '<div class="cc-src"><div class="top"><span class="cc-sid">' + esc(s.id) + '</span>' +
+            '<span class="cc-slab">' + esc(s.label) + '</span></div>' +
+            '<div class="cc-sm">' +
+              (s.kind ? '<span>' + esc(s.kind) + '</span>' : '') +
+              (s.tier ? '<span class="hier">' + esc(s.tier) + '</span>' : '') +
+              (s.verified ? '<span>' + esc(s.verified) + '</span>' : '') +
+            '</div>' +
+            (s.note ? '<div class="cc-noteit" style="margin-top:6px">' + esc(s.note) + '</div>' : '') +
+            (s.url ? '<div class="cc-noteit" style="margin-top:6px"><a href="' + esc(s.url) + '" target="_blank" rel="noopener">' +
+                     esc(s.url) + '</a></div>' : '') +
+          '</div>').join('') + '</div>'
+      : '<div class="cc-empty">无出处数据。</div>';
+
+    // —— 「论证」tab：成立环节 / 疑点，各条带 根据 + 引用 + 成分 ——
+    function argBlock(title, arr, cls){
+      if(!arr || !arr.length) return '';
+      const srcMap = {}; srcs.forEach(s => srcMap[s.id] = s);
+      return '<div class="cc-block ' + cls + '">' +
+        '<div class="cc-block-title">' + esc(title) + '（' + arr.length + '）</div>' +
+        '<div class="cc-list">' + arr.map(a => {
+          const metas = [];
+          (a.ref || []).forEach(r => {
+            const label = REF_LABEL[r] || ((srcMap[r] || {}).label || '');
+            metas.push('<span class="cc-ref" title="' + esc(label) + '">' + esc(r) + '</span>');
+          });
+          (a.tags || []).forEach(t => metas.push('<span class="cc-tag ' + tagCls(t) + '">' + esc(t) + '</span>'));
+          return '<div class="cc-arg">' +
+            '<div class="aclaim"><span class="t">' + esc(a.claim) + '</span></div>' +
+            (a.basis ? '<div class="abas"><b>根据：</b>' + esc(a.basis) + '</div>' : '') +
+            (metas.length ? '<div class="ameta">' + metas.join('') + '</div>' : '') +
+          '</div>';
+        }).join('') + '</div></div>';
+    }
+    let argHtml = '';
+    if(it.holds && it.holds.length && it.doubts && it.doubts.length){
+      argHtml = '<div class="cc-warnbox hint"><b>成立与疑点并存</b>事实骨架多为成立，但关键例证/归因存在史料冲突或硬反证，需打折理解。</div>';
+    }
+    argHtml += argBlock('成立环节', it.holds, 'ok') + argBlock('疑点与证据不足', it.doubts, 'warn');
+    if(!argHtml){
+      const hd = (it.holds || []).length, dd = (it.doubts || []).length;
+      if(hd) argHtml = argBlock('成立环节', it.holds, 'ok');
+      else if(dd) argHtml = argBlock('疑点与证据不足', it.doubts, 'warn');
+      else argHtml = '<div class="cc-empty">无论证条目。</div>';
+    }
+    panes.arg.innerHTML = argHtml;
+  }
+
 
   /* 章节时间刻度线 */
   function buildMarks(){
@@ -806,12 +1202,22 @@
   }
 
   /* 章节列表 */
+  function gradeSpan(it){
+    if(!it) return '';
+    const g = worstGrade(it.rating);
+    const safe = g.replace('/', '\\/');   // N/A → 由 CSS 处理 .gr-N\2f A
+    const cls = (g === 'N/A') ? 'gr-NA' : ('gr-' + g);
+    return '<span class="gr-badge ' + cls + '" title="可信度评级 ' + esc(it.rating) + '">' +
+           esc(g) + '</span>';
+  }
   function buildRail(){
     el.chList.innerHTML = S.chapters.map((c,k)=>{
       const end = chapterEnd(k);
+      const it = CRED_BY_ID[credIdFor(k)];
       return '<div class="ch-item" data-k="'+k+'">' +
                '<span class="ch-num">'+(k+1)+'</span>' +
-               '<span class="ch-name">'+c.title+'</span>' +
+               '<span class="ch-name" title="'+esc(c.title)+'">'+esc(c.title)+'</span>' +
+               gradeSpan(it) +
                '<span class="ch-t">'+fmt(c.t)+'–'+fmt(end)+'</span>' +
                '<button class="ch-mark" data-mark="'+k+'" title="把当前播放时间设为这一段的起点">打点</button>' +
              '</div>';
@@ -823,8 +1229,8 @@
      8. 交互
      ======================================================= */
   // 播放 / 暂停
-  el.btnPlay.addEventListener('click', togglePlay);
-  veil.addEventListener('click', ()=>{ setPlaying(true); });
+  el.btnPlay.addEventListener('click', ()=>{ if(S.mode==='iframe') armFrame(); togglePlay(); });
+  veil.addEventListener('click', ()=>{ if(S.mode==='iframe') armFrame(); setPlaying(true); });
 
   // 时间轴拖动
   let dragging = false;
@@ -938,7 +1344,7 @@
     const v = parseTime(alignInput.value);
     if(v === null){ toast('时间格式不对，试试 07:35'); return; }
     S.t = clamp(v, 0, S.dur);
-    if(S.mode === 'iframe' && S.reload) loadFrame(S.t, false);
+    if(S.mode === 'iframe' && S.reload) loadFrame(S.t, false, {force:true});
     if(S.mode === 'local' && localVideo) localVideo.currentTime = S.t;
     closeAlign(); render(true); save();
     toast('已对齐到 ' + fmt(S.t));
@@ -958,6 +1364,24 @@
   });
   $('btnHideTip').addEventListener('click', ()=>{ $('embedTip').style.display = 'none'; });
 
+  /* ---------- 播放器占位层的三个动作 ---------- */
+  $('btnPosterLoad').addEventListener('click', ()=>{
+    if(S.mode !== 'iframe') setManual(false);
+    armFrame();
+    loadFrame(S.t, true, {force:true});
+    setPlaying(true);
+    toast('已请求加载 B 站播放器');
+  });
+  $('btnPosterTab').addEventListener('click', ()=>{
+    window.open('https://www.bilibili.com/video/' + BV + '/?p=1&t=' + Math.floor(S.t), '_blank', 'noopener');
+    toast('已在新标签页打开 B 站，从 ' + fmt(S.t) + ' 开始');
+  });
+  $('btnPosterManual').addEventListener('click', ()=>{
+    if(S.mode !== 'manual') setManual(true);
+    poster.classList.add('hide');
+    toast('已切到无视频计时：右侧观点与核查照常联动');
+  });
+
   /* ---------- 本地视频（精确同步） ---------- */
   let localVideo = null;
   $('btnLocal').addEventListener('click', ()=>{
@@ -969,7 +1393,7 @@
       $('btnLocal').classList.remove('on');
       el.modeBadge.className = 'badge'; el.modeBadge.textContent = 'B 站在线 · 估算同步';
       el.durLabel.textContent = fmt(S.dur); el.tDur.textContent = fmt(S.dur);
-      loadFrame(0, false);
+      loadFrame(0, false, {force:true});
       buildMarks(); buildRail(); render(true);
       toast('已切回 B 站在线播放');
       return;
@@ -1011,6 +1435,7 @@
     el.modeBadge.className = 'badge exact';
     el.modeBadge.textContent = '本地视频 · 精确同步';
     veil.classList.add('hide');
+    poster.classList.add('hide');
     toast('已切换为本地视频，进度 100% 精确');
     e.target.value = '';
   });
@@ -1038,6 +1463,18 @@
     else el.syncBadge.textContent = S.playing ? '同步中' : '已暂停';
   });
 
+  /* ---------- 核查面板：显隐 + tab ---------- */
+  $('btnCred').addEventListener('click', ()=>{
+    UI_PREFS.open = !UI_PREFS.open;
+    applyPanelUI(); saveUiPrefs();
+  });
+  document.querySelectorAll('.ccp-tab').forEach(tb => {
+    tb.addEventListener('click', ()=>{
+      UI_PREFS.tab = tb.dataset.tab;
+      applyPanelUI(); saveUiPrefs();
+    });
+  });
+
   /* =======================================================
      9. 启动
      ======================================================= */
@@ -1046,6 +1483,8 @@
   el.tDur.textContent = fmt(S.dur);
   el.durLabel.textContent = fmt(S.dur);
   el.syncBadge.textContent = '未开始';
+  loadUiPrefs();
+  applyPanelUI();
 
   // 恢复上次位置
   try{
@@ -1075,7 +1514,8 @@
 
   render(true);
   if(jumpedFromUrl){
-    if(S.mode === 'iframe' && S.reload) loadFrame(S.t, false);
+    // 从可信度报告的时间码点进来 = 明确要看视频，直接加载播放器
+    if(S.mode === 'iframe' && S.reload) loadFrame(S.t, false, {force:true});
     toast('已跳转到 ' + fmt(S.t));
   }
   requestAnimationFrame(tick);

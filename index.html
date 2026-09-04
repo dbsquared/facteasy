@@ -172,6 +172,19 @@
   }
   .tag.hot{color:var(--accent);border-color:rgba(224,164,90,.35);background:var(--accent-soft);}
   .card p{margin:0 0 14px;color:var(--txt-dim);font-size:13.5px;}
+  .card p.card-note{
+    margin:0 0 14px;padding:9px 12px;
+    border-left:2px solid rgba(224,164,90,.45);
+    border-radius:0 6px 6px 0;
+    background:rgba(224,164,90,.07);
+    font-size:12.8px;line-height:1.72;color:var(--txt-dim);
+  }
+  .card p.card-note code{
+    padding:1px 5px;border-radius:4px;
+    background:rgba(255,255,255,.07);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11.8px;color:var(--txt);
+  }
   .card .go{
     margin-top:auto;
     display:inline-flex;align-items:center;gap:6px;
@@ -282,11 +295,15 @@
           <div class="card-top">
             <div class="card-ico">▶</div>
             <h3>视频同步阅读器</h3>
-            <span class="tag hot">主推</span>
+            <span class="tag hot">主推 · 含核查面板</span>
           </div>
           <p>
             左侧嵌入 B 站播放器，右侧内容随播放进度自动切换：章节高亮、要点逐条点亮，
             支持打点校正、倍速、跳段与本地视频精确同步模式。
+          </p>
+          <p class="card-note">
+            已内置<b>事实核查面板</b>：章节列表显示 A/B/C/D 评级徽章，右侧三个页签
+            ——<b>原文逐字稿</b>（关键句高亮 + ASR 勘误）、<b>出处与根据</b>、<b>论证</b>——随播放进度同步切换。
           </p>
           <span class="go">打开页面 <span class="arrow">→</span></span>
           <div class="path">pages/sync-player.html</div>
@@ -317,6 +334,10 @@
           <p>
             每条观点附<b>原文逐字稿</b>（关键句高亮 + ASR 勘误），按<b>转述 / 专属 / 原创</b>三标签（可并存）判定来源性质，
             逐条列出<b>出处与根据</b>（类型 · 权威层级 T0–T4 · 核验状态），再给综合评级。支持多标签筛选、全文检索与逐条展开。
+          </p>
+          <p class="card-note">
+            同一套数据已<b>内嵌进同步阅读器</b>：边看视频边切换核查面板，无需在页面间跳转。
+            两处共用 <code>pages/facteasy-data.js</code>，永不分叉。
           </p>
           <span class="go">查看评估 <span class="arrow">→</span></span>
           <div class="path">pages/credibility.html</div>

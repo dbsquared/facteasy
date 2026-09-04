@@ -19,6 +19,7 @@
 | `credibility.md` | **18 条观点的可信度逐条评估报告**（来源性质三分 + 权威层级 + 证据强度 + 评级） |
 | `credibility.json` | 上述评估的机器可读版本，字段与 `viewpoints.json` 的 `id` 一一对应 |
 | `credibility.html` | **评估报告的交互版页面**（生成到 `pages/credibility.html`，数据与 `credibility.json` 内联，可离线打开） |
+| `build_site_data.py` | **共享数据层生成脚本**（`viewpoints.json` + `credibility.json` → `pages/facteasy-data.js`，供同步阅读器与评估页共用，带 id/时间码交叉校验） |
 | `build_timeline.py` | 时间轴生成脚本（输入 `viewpoints.json` + 视频路径，方法可复用） |
 | `build_credibility_page.py` | 评估页生成脚本（输入 `credibility.json` → 输出 `pages/credibility.html`） |
 | `build_credibility_md.py` | 评估报告生成脚本（输入 `credibility.json` → 输出 `credibility.md`；**md 由脚本生成，勿手改**） |
@@ -26,6 +27,39 @@
 | `rebuild_credibility_data.py` | 数据重构脚本：三标签化 + 补出处/根据 + 灌原文与勘误（一次性迁移，已执行） |
 | `_smoke_check.py` | 生成页的冒烟检查（JS 语法 / 挂载点 / 数据结构自检 / 标签配对 / 相对路径） |
 | `_smoke_runtime.js` | 运行时冒烟：DOM 桩执行页内脚本，覆盖渲染 / 评级筛选 / 多标签筛选 / 仅关键句 |
+| `_smoke_sync.js` | 运行时冒烟：DOM 桩执行 `sync-player.html` 内联脚本，覆盖章节列表 / 评级徽章 / 核查行 / 页签填充 |
+
+### 核查面板已内嵌同步阅读器
+
+`pages/sync-player.html` 现在**边看视频边核查**，无需在页面间跳转：
+
+- **章节列表**：每个观点行右侧显示 A/B/C/D 评级徽章（`body.cc-rail` 控制显隐）
+- **核查行**：内容卡片标题下方一行，显示来源性质标签 + 综合评级 + 可靠程度
+- **核查面板**：右侧三页签，随播放进度自动切换当前观点
+  - `原文逐字稿` — 关键句高亮 + ASR 勘误
+  - `出处与根据` — 编号 S1… + 类型 + 权威层级 T0–T4 + 核验状态 + 可点击原文链接
+  - `论证` — 成立环节 / 疑点与证据不足，每条论点标注 `根据` 与引用编号
+- **状态持久化**：面板开合与当前页签写入 `localStorage['bilisync-ui:<BV>']`
+
+顶栏 `核查面板 · 开/关` 按钮切换显示。数据来自 `pages/facteasy-data.js`，与 `pages/credibility.html` **同源**，不会分叉。
+
+### B 站播放器：懒加载 + 三级兜底
+
+iframe **不在页面打开时加载**（`src="about:blank"`，真实地址放在 `data-src`），只有用户点击
+「加载 B 站播放器」才注入。右侧的观点切分与核查**不依赖播放器**，不加载也完全可用。
+
+三级兜底：
+
+| 兜底 | 入口 | 行为 |
+|------|------|------|
+| 占位层 | 默认显示 | 说明 + 三个按钮：加载播放器 / 新标签页打开 B 站 / 改用无视频计时 |
+| 无视频计时 | `setManual(true)` | 彻底 `display:none` 掉 iframe（连报错一起盖住），右侧照常按时间线联动 |
+| 本地视频 | `本地视频（精确）` | 载入本地 mp4，切换为原生播放器，进度 100% 精确 |
+
+> **实测结论**：`player.bilibili.com` 的响应头**不含** `X-Frame-Options` 与 CSP
+> `frame-ancestors`，返回的就是官方「哔哩哔哩嵌入式外链播放器」——**B 站不限制嵌入**。
+> 若仍出现 `This content is blocked`，一定是宿主环境（IDE 预览面板 / 沙箱 / 内网）拦截了外部
+> iframe，换普通浏览器或访问已部署的 GitHub Pages 版本即正常。
 
 ### 可信度评估（第二阶段）
 
@@ -75,11 +109,17 @@
 **重新生成评估页**（改完 `credibility.json` 后）：
 
 ```bash
+python build_site_data.py          # → ../../pages/facteasy-data.js（先跑这个，两页共用）
 python build_credibility_page.py   # → ../../pages/credibility.html
 python build_credibility_md.py     # → ./credibility.md
 python _smoke_check.py             # 冒烟检查：JS 语法 / 挂载点 / 数据结构自检 / 标签配对 / 相对路径
 node _smoke_runtime.js             # 运行时冒烟：渲染 / 筛选 / 仅关键句
+node _smoke_sync.js                # 运行时冒烟：同步阅读器的章节列表 / 评级徽章 / 核查行 / 页签
 ```
+
+> **`build_site_data.py` 会交叉校验**：若 `credibility.json` 与 `viewpoints.json` 的 `id` 或
+> 时间码不一致会 WARN 并以退出码 1 结束——两处时间码必须对齐，否则同步阅读器的
+> 核查面板会在错误的观点上显示。历史上有 12 条因取整出现过漂移（如 117.0 vs 117.8），已修正。
 - **可交互**：打开站点的 `../../pages/sync-player.html`，左侧播 B 站视频、右侧内容随进度联动，18 个观点按时间轴高亮。
 - **本地生成时间轴（可选）**：`python build_timeline.py` 会基于 `viewpoints.json` 生成一份 `timeline.html`，
   它内嵌的是**本地 mp4 绝对路径**，仅供本地查看，不适用于 GitHub Pages。

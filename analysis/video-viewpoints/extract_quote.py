@@ -10,8 +10,9 @@ item["quote"]["segments"]，并保留手工标注的 key 标记。
     python extract_quote.py --preview  # 只打印，不写回
 
 特性：
-  - 幂等：重复运行不会丢失已有 key 标记（按 text 精确匹配）。
-  - 只覆盖 quote.segments / quote.range / quote.stats，不动其他字段。
+  - 幂等：重复运行不会丢失已有 key 标记与 fix 勘误（均按 text 精确匹配保留）。
+  - 只覆盖 quote.segments / quote.range / quote.stats，不动其他字段；
+    quote.note 若已存在则原样保留。
 """
 import json
 import os
@@ -20,7 +21,11 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC_JSON = os.path.join(HERE, 'credibility.json')
-SRT = r'E:\projects\video-fetcher\transcripts\蒋介石明明是名中正字介石，为何大陆会普遍称他蒋介石？.srt'
+DEFAULT_SRT = r'E:\projects\video-fetcher\transcripts\蒋介石明明是名中正字介石，为何大陆会普遍称他蒋介石？.srt'
+# 也可用环境变量或命令行指定逐字稿：python extract_quote.py path/to/xxx.srt
+SRT = os.environ.get('FACTEASY_SRT') or (
+    sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith('--') else DEFAULT_SRT
+)
 
 TIME_RE = re.compile(
     r'(\d{2}):(\d{2}):(\d{2})[,.](\d{1,3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{1,3})'
@@ -78,28 +83,35 @@ def main():
             picked = [s for s in segs if s[0] < b and s[1] > a]
 
         old = (it.get('quote') or {}).get('segments') or []
-        keymap = {}
+        keymap, fixmap = {}, {}
         for o in old:
-            if isinstance(o, dict) and o.get('key') and o.get('text'):
-                keymap[o['text']] = True
+            if isinstance(o, dict) and o.get('text'):
+                if o.get('key'):
+                    keymap[o['text']] = True
+                if o.get('fix'):
+                    fixmap[o['text']] = o['fix']
+        old_note = (it.get('quote') or {}).get('note')
 
         new_segs = []
         for st, en, tx in picked:
-            new_segs.append({
-                't': st,
-                'text': tx,
-                'key': bool(keymap.get(tx)),
-            })
+            seg = {'t': st, 'text': tx, 'key': bool(keymap.get(tx))}
+            if fixmap.get(tx):
+                seg['fix'] = fixmap[tx]
+            new_segs.append(seg)
 
-        it['quote'] = {
+        q = {
             'range': '%s–%s' % (fmt(a), fmt(b)),
             'segments': new_segs,
             'stats': {
                 'lines': len(new_segs),
                 'chars': sum(len(s['text']) for s in new_segs),
                 'key_lines': sum(1 for s in new_segs if s['key']),
+                'fix_lines': sum(1 for s in new_segs if s.get('fix')),
             },
         }
+        if old_note:
+            q['note'] = old_note
+        it['quote'] = q
         if preview:
             print('--- #%d %s [%s] %d 行 / %d 字'
                   % (it['id'], it['title'], fmt(a) + '–' + fmt(b),
@@ -114,8 +126,11 @@ def main():
         f.write('\n')
 
     total = sum(i['quote']['stats']['lines'] for i in data['items'])
+    keys = sum(i['quote']['stats']['key_lines'] for i in data['items'])
+    fixes = sum(i['quote']['stats'].get('fix_lines', 0) for i in data['items'])
     print('已写回 %s' % SRC_JSON)
-    print('  观点 %d 条，共 %d 行逐字稿' % (len(data['items']), total))
+    print('  观点 %d 条，共 %d 行逐字稿（关键句 %d 行，勘误 %d 行）'
+          % (len(data['items']), total, keys, fixes))
     return 0
 
 
