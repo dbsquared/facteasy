@@ -100,6 +100,24 @@
   .video-box iframe,.video-box video{
     position:absolute;inset:0;width:100%;height:100%;border:0;display:block;
   }
+  /* 接管层：盖在 iframe 之上，点击视频区 = 播放/暂停，且一律走本页重载定位，
+     保证「播放器状态」与右侧文本时钟严格一致（B 站 iframe 不回传播放进度，
+     不接管就会被它的原生暂停/播放绕开，导致文本各走各的）。 */
+  .frame-catcher{
+    position:absolute;inset:0;z-index:3;cursor:pointer;display:none;
+    align-items:center;justify-content:center;
+  }
+  .frame-catcher.on{display:flex;}
+  .frame-catcher .fc-glyph{
+    width:58px;height:58px;border-radius:50%;
+    background:rgba(8,11,16,.5);border:1px solid rgba(255,255,255,.18);
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;color:#fff;opacity:0;transition:opacity .18s;pointer-events:none;
+  }
+  .frame-catcher:hover .fc-glyph{opacity:.92;}
+  .frame-catcher.playing .fc-glyph::after{content:"\229A\229A";}
+  .frame-catcher:not(.playing) .fc-glyph::after{content:"\25B6";}
+  .buffering{pointer-events:none;}
   .veil{
     position:absolute;inset:0;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:14px;
@@ -603,6 +621,9 @@
           scrolling="no" frameborder="0"
           allow="autoplay; fullscreen; encrypted-media"
           allowfullscreen="true" title="B站播放器"></iframe>
+        <div class="frame-catcher" id="frameCatcher" title="点击视频区域 = 播放 / 暂停（与右侧文本同步）">
+          <span class="fc-glyph"></span>
+        </div>
         <div class="poster" id="poster">
           <div class="p-ico">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="#e0a45a"><path d="M8 5v14l11-7z"/></svg>
@@ -672,6 +693,8 @@
         <label class="switch" title="开启时，播放/暂停/跳转会通过重载播放器精确定位；关闭则只移动右侧内容，需你自己在播放器里操作">
           <input type="checkbox" id="chkReload" checked> 重载定位
         </label>
+        <button class="btn ghost" id="btnStrict" title="开启后每 20 秒自动重载定位一次，消除视频缓存造成的漂移（代价：偶发 1–2 秒重缓冲）">严格同步</button>
+        <button class="btn ghost" id="btnFs" title="全屏播放器（全屏内可用 B 站原生控件）">全屏</button>
         <button class="btn ghost" id="btnLocal">本地视频（精确）</button>
         <button class="btn ghost" id="btnManual">无视频计时</button>
         <input type="file" id="fileLocal" accept="video/*" style="display:none">
@@ -735,10 +758,11 @@
 
 <div class="foot">
   <b>快捷键（焦点在页面空白处时）</b>：空格 = 播放/暂停 · ← → = ±5 秒 · ↑ ↓ = 上/下一个观点 · <code>C</code> = 对齐时间 · <code>1..9</code> = 直跳第 N 个观点（更多见左侧列表）<br>
-  <b>关于同步精度</b>：B 站官方 iframe 播放器不向外部页面回传播放进度（跨域限制，无可用接口），因此本页采用「本地时钟 + 重载定位」方案：
-  开启「重载定位」后，播放/暂停/跳转都会用 <code>&amp;t=秒数</code> 重新加载播放器，时间点精确不漂移，代价是约 1–2 秒缓冲；
-  若你在播放器内部自行拖动/暂停，点「对齐时间」或按 <code>C</code> 输入播放器上的时间即可纠偏。
-  如需逐帧精确同步，点「本地视频（精确）」载入本地 <code>.mp4</code>，将切换为原生播放器，进度 100% 精确。<br>
+  <b>关于同步精度</b>：B 站官方 iframe 播放器不向外部页面回传播放进度（跨域限制，无可用接口），所以本页用「接管 + 重载定位」让文本与播放器强绑定：
+  <b>视频区域上盖了一层接管层</b>——点视频画面本身即播放/暂停，且一律走本页的 <code>&amp;t=秒数</code> 重载定位，所以「播放器状态」和右侧文本时钟是同一来源，<b>你点暂停，文本也立刻停</b>（代价是约 1–2 秒缓冲）。
+  音量/弹幕请用「全屏」按钮（全屏内可操作 B 站原生控件）。
+  <b>视频缓存导致文本偷偷往前走</b>：点「严格同步」开关，会每 20 秒自动重载定位一次把漂移拉回 0；或随时点「对齐时间」/按 <code>C</code> 照播放器上的时间手动纠偏。
+  逐帧精确同步（可选）：点「本地视频（精确）」载入本地 <code>.mp4</code> 切换为原生播放器，进度 100% 精确——但默认不强依赖它。<br>
   <b>为什么播放器默认是空的？</b>本页对 B 站 iframe 做了<b>懒加载</b>：打开时不发任何外部请求，只有你点了「加载 B 站播放器」才会真正载入。
   这样在会拦截外部嵌入的环境里，不会一进来就糊一张报错页；而且右侧的观点切分与事实核查<b>完全不依赖播放器</b>，不加载也能看。<br>
   <b>加载后显示「This content is blocked」怎么办？</b>这表示是<b>当前预览环境</b>（某些 IDE 预览面板 / 沙箱 / 内网）拦了外部 iframe，不是页面坏了，也<b>不是 B 站在拦</b>
@@ -850,6 +874,9 @@
     rate: 1,
     mode: 'iframe',   // 'iframe' | 'local'
     reload: true,
+    heartbeat: false, // 严格同步：周期重载定位，消除缓存漂移
+    hbSec: 20,
+    hbAccum: 0,
     lastFrame: 0,
     chapters: loadChapters()
   };
@@ -906,7 +933,7 @@
      3. DOM
      ======================================================= */
   const $ = id => document.getElementById(id);
-  const frame = $('biliFrame'), veil = $('veil'), bufTip = $('bufTip'), box = $('videoBox');
+  const frame = $('biliFrame'), veil = $('veil'), bufTip = $('bufTip'), box = $('videoBox'), catcher = $('frameCatcher');
   const poster = $('poster');
   const track = $('track'), fill = $('fill'), knob = $('knob');
   const el = {
@@ -968,6 +995,7 @@
     if(frameArmed) return;
     frameArmed = true;
     poster.classList.add('hide');
+    if(S.mode === 'iframe') catcher.classList.add('on');  // 接管原生控件，点击 = 本页播放/暂停
   }
   function disarmFrame(){
     frameArmed = false;
@@ -990,6 +1018,7 @@
   }
   function seek(t, opts){
     opts = opts || {};
+    S.hbAccum = 0;
     S.t = clamp(t, 0, S.dur);
     if(S.mode === 'local' && localVideo){
       try{ localVideo.currentTime = S.t; }catch(e){}
@@ -1000,6 +1029,7 @@
   }
   function setPlaying(v){
     S.playing = !!v;
+    S.hbAccum = 0;
     if(S.mode === 'local' && localVideo){
       S.playing ? localVideo.play().catch(()=>{}) : localVideo.pause();
     }else if(S.mode === 'iframe'){
@@ -1011,12 +1041,23 @@
   }
   function togglePlay(){ setPlaying(!S.playing); }
 
+  /* B 站 iframe 不提供倍速控制接口（URL 无 rate 参数），iframe / 手动模式下
+     倍速选择器会制造「文本比视频快/慢」的假同步，故仅本地视频模式启用。 */
+  function syncRateUi(){
+    const local = (S.mode === 'local');
+    const sel = $('selRate');
+    sel.disabled = !local;
+    if(!local) S.rate = 1;
+  }
+
   /* 无视频计时模式：环境里 iframe 被拦时，右侧联动照样能用 */
   function setManual(on){
     const panel = $('manualPanel');
     if(on){
       if(S.mode === 'local' && localVideo) localVideo.pause();
       S.mode = 'manual';
+      catcher.classList.remove('on');
+      syncRateUi();
       frame.style.display = 'none';
       if(localVideo) localVideo.style.display = 'none';
       panel.classList.add('on');
@@ -1038,6 +1079,8 @@
       }
       $('btnLocal').classList.remove('on');
       S.mode = 'iframe';
+      catcher.classList.add('on');
+      syncRateUi();
       frame.style.display = '';
       panel.classList.remove('on');
       poster.classList.add('hide');
@@ -1058,6 +1101,12 @@
     S.lastFrame = ts;
     if(S.playing && dt < 1.5){          // 忽略切后台造成的巨大跳跃
       S.t += dt * S.rate;
+      S.hbAccum += dt * S.rate;
+      // 严格同步：周期重载定位，把「视频缓存期间文本偷偷往前走」的漂移拉回 0
+      if(S.heartbeat && S.mode === 'iframe' && S.reload && S.hbAccum >= S.hbSec){
+        S.hbAccum = 0;
+        loadFrame(S.t, true, {force:true});
+      }
       if(S.t >= S.dur){ S.t = S.dur; S.playing = false; }
     }
     render(false);
@@ -1095,6 +1144,7 @@
       el.btnPlay.innerHTML = S.playing ? '❚❚ 暂停' : '▶ 播放';
       el.syncBadge.textContent = S.playing ? '同步中' : '已暂停';
       el.syncBadge.className = S.playing ? 'badge live' : 'badge';
+      catcher.classList.toggle('playing', S.playing && S.mode === 'iframe');
     }
 
     /* --- 主内容：观点 --- */
@@ -1472,6 +1522,25 @@
   el.btnPlay.addEventListener('click', ()=>{ if(S.mode==='iframe') armFrame(); togglePlay(); });
   veil.addEventListener('click', ()=>{ if(S.mode==='iframe') armFrame(); setPlaying(true); });
 
+  // 接管层：点击视频区域即播放/暂停，且走本页重载定位（与右侧文本严格同步）
+  catcher.addEventListener('click', ()=>{
+    if(S.mode === 'iframe' && frameArmed) togglePlay();
+  });
+  // 严格同步开关
+  $('btnStrict').addEventListener('click', ()=>{
+    S.heartbeat = !S.heartbeat;
+    $('btnStrict').classList.toggle('on', S.heartbeat);
+    toast(S.heartbeat ? ('已开启严格同步：每 ' + S.hbSec + ' 秒自动重定位一次（防缓存漂移）')
+                      : '已关闭严格同步');
+  });
+  // 全屏：全屏内可用 B 站原生控件（音量/弹幕等）；退出全屏后继续由接管层控制
+  $('btnFs').addEventListener('click', ()=>{
+    try{
+      if(document.fullscreenElement) document.exitFullscreen();
+      else frame.requestFullscreen();
+    }catch(e){ toast('当前环境不支持全屏'); }
+  });
+
   // 时间轴拖动
   let dragging = false;
   function posToTime(clientX){
@@ -1630,6 +1699,7 @@
       if(localVideo){ localVideo.pause(); localVideo.remove(); localVideo = null; }
       frame.style.display = '';
       S.mode = 'iframe'; S.dur = DEFAULT_DUR; S.t = 0; S.playing = false;
+      catcher.classList.add('on'); syncRateUi();
       $('btnLocal').classList.remove('on');
       el.modeBadge.className = 'badge'; el.modeBadge.textContent = 'B 站在线 · 估算同步';
       el.durLabel.textContent = fmt(S.dur); el.tDur.textContent = fmt(S.dur);
@@ -1652,6 +1722,9 @@
     $('btnManual').classList.remove('on');
     localVideo = v;
     S.mode = 'local'; S.playing = false; S.t = 0;
+    catcher.classList.remove('on');
+    syncRateUi();
+    v.playbackRate = S.rate;
 
     v.addEventListener('loadedmetadata', ()=>{
       S.dur = v.duration || DEFAULT_DUR;
@@ -1735,6 +1808,7 @@
   el.syncBadge.textContent = '未开始';
   loadUiPrefs();
   applyPanelUI();
+  syncRateUi();   // iframe / 手动模式下禁用倍速选择器（无法驱动 B 站 iframe）
 
   // 恢复上次位置
   try{

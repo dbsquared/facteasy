@@ -158,6 +158,10 @@ log(!/player\.bilibili\.com/.test(srcAttr),
   log(html.indexOf('id="' + b + '"') !== -1, '占位层按钮 ' + b + ' 存在');
 });
 log(html.indexOf('id="poster"') !== -1, '占位层 #poster 存在');
+// 播放器「强绑定」接管层 + 新控制按钮
+log(html.indexOf('id="frameCatcher"') !== -1, '接管层 #frameCatcher 存在（点击视频=播放/暂停）');
+log(html.indexOf('id="btnStrict"') !== -1, '「严格同步」按钮存在');
+log(html.indexOf('id="btnFs"') !== -1, '「全屏」按钮存在');
 
 // 运行时：脚本首次执行完，仍不应向 B 站发请求
 const frameEl = elements['biliFrame'];
@@ -176,6 +180,29 @@ try{
   log(elements['poster'].classList.contains('hide'), '加载后占位层已隐藏');
 }catch(e){
   log(false, '模拟点击「加载播放器」抛异常：' + (e.stack || e.message));
+}
+
+/* ---------- 强绑定：点击接管层 = 播放/暂停（与右侧文本同一来源） ---------- */
+try{
+  const catcher = elements['frameCatcher'];
+  log(catcher.classList.contains('on'), '加载后接管层已启用（接管原生控件）');
+  log(catcher.classList.contains('playing'), '接管层显示「播放中」状态');
+  // 点视频区 → 暂停：播放器应重载为 autoplay=0（文本时钟随之停）
+  const srcA = frameEl.src;
+  catcher.click();
+  const srcB = frameEl.src;
+  log(/autoplay=0/.test(srcB), '点击视频区 → 暂停：播放器重载为 autoplay=0（' + srcB.slice(-12) + '）');
+  log(!catcher.classList.contains('playing'), '接管层切换为「已暂停」状态');
+  // 再点 → 恢复播放：autoplay=1
+  catcher.click();
+  log(/autoplay=1/.test(frameEl.src), '再点视频区 → 恢复播放：autoplay=1');
+  // 严格同步开关
+  elements['btnStrict'].click();
+  log(elements['btnStrict'].classList.contains('on'), '「严格同步」点击后进入开启态');
+  elements['btnStrict'].click();
+  log(!elements['btnStrict'].classList.contains('on'), '「严格同步」再次点击回到关闭态');
+}catch(e){
+  log(false, '强绑定模拟抛异常：' + (e.stack || e.message));
 }
 
 const g = id => records[id] || {};
