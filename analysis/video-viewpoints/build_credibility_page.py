@@ -11,7 +11,7 @@
     不需要手改 HTML。数据以 JS 对象内联进页面，因此 file:// 直接打开也能用。
 
 页面呈现三块核心内容（对应数据里的新结构）：
-    1. 原文逐字稿   —— item.quote.segments（含关键句高亮与 ASR 勘误）
+    1. 原文逐字稿   —— item.quote.segments（含关键句高亮；ASR 同音讹误已补正）
     2. 出处与根据   —— item.sources[]（编号 / 类型 / 权威层级 / 核验状态 / 链接）
                       + holds[]、doubts[] 每条的 basis 与 ref 引用
     3. 来源性质标签 —— item.natures[]（转述 / 专属 / 原创，可多标签并存）
@@ -311,10 +311,6 @@ TEMPLATE = r"""<!DOCTYPE html>
     color:var(--txt);border-left-color:var(--accent);
     background:linear-gradient(90deg,rgba(224,164,90,.11),transparent 70%);
   }
-  .ql .qfix{
-    display:block;font-size:11.5px;color:var(--gc);opacity:.9;margin-top:1px;
-  }
-  .ql .qfix::before{content:"勘误：";opacity:.7;}
   .qt-note{
     padding:7px 12px;border-top:1px dashed var(--line-soft);
     font-size:11.5px;color:var(--txt-faint);background:rgba(26,34,46,.4);
@@ -453,7 +449,7 @@ TEMPLATE = r"""<!DOCTYPE html>
       <div class="eyebrow">● 观点可信度 · 逐条评估</div>
       <h1 id="h1">观点可信度评估</h1>
       <p class="lede">
-        对切分出的每条观点给出<b>原文逐字稿</b>（关键句高亮、ASR 同音讹误逐条勘误），
+        对切分出的每条观点给出<b>原文逐字稿</b>（关键句高亮，ASR 同音讹误已逐条补正），
         判定来源性质（<b style="color:var(--gb)">转述</b> / <b style="color:var(--gc)">专属</b> / <b style="color:var(--gp)">原创</b>，可并存），
         <b>逐条列出出处与根据</b>（类型、权威层级 T0–T4、核验状态与链接），
         再据此给出综合评级。
@@ -709,7 +705,7 @@ function currentList(){
       (it.sources || []).map((s) => [s.id, s.label, s.kind, s.tier, s.note, s.url].join(' ')).join(' '),
       (it.holds || []).map((h) => [h.claim, h.basis, (h.tags || []).join(' ')].join(' ')).join(' '),
       (it.doubts || []).map((d) => [d.claim, d.basis, (d.tags || []).join(' ')].join(' ')).join(' '),
-      ((it.quote || {}).segments || []).map((s) => s.text + ' ' + (s.fix || '')).join(' '),
+      ((it.quote || {}).segments || []).map((s) => s.text).join(' '),
       Object.keys(it.sub_ratings || {}).join(' ')
     ].join(' ').toLowerCase();
     return hay.indexOf(q) !== -1;
@@ -722,12 +718,9 @@ function quoteHTML(it){
   if(!q || !q.segments || !q.segments.length) return '';
   const st = q.stats || {};
   const rows = q.segments.filter((s) => !keyOnly || s.key).map((s) => {
-    const fix = s.fix
-      ? '<span class="qfix">' + esc(s.fix) + '</span>'
-      : '';
     return '<div class="ql' + (s.key ? ' key' : '') + '">' +
              '<span class="t">' + fmt(s.t) + '</span>' +
-             '<span class="x">' + esc(s.text) + fix + '</span>' +
+             '<span class="x">' + esc(s.text) + '</span>' +
            '</div>';
   }).join('');
   return '' +
@@ -736,7 +729,6 @@ function quoteHTML(it){
         '<span class="rng">' + esc(q.range || (fmt(it.start) + '–' + fmt(it.end))) + '</span>' +
         '<span>' + (st.lines || q.segments.length) + ' 行 / ' + (st.chars || 0) + ' 字</span>' +
         '<span>关键句 ' + (st.key_lines || 0) + '</span>' +
-        (st.fix_lines ? '<span>勘误 ' + st.fix_lines + '</span>' : '') +
         '<span class="sp"></span>' +
         '<span class="qt-toggle' + (keyOnly ? ' on' : '') + '" data-keyonly="1">' +
           (keyOnly ? '仅关键句' : '全部') + '</span>' +
@@ -956,11 +948,10 @@ def main():
     n_src = sum(len(it.get('sources', [])) for it in items)
     n_line = sum(it.get('quote', {}).get('stats', {}).get('lines', 0) for it in items)
     n_key = sum(it.get('quote', {}).get('stats', {}).get('key_lines', 0) for it in items)
-    n_fix = sum(it.get('quote', {}).get('stats', {}).get('fix_lines', 0) for it in items)
 
     print('生成完成: %s' % OUT_HTML)
     print('  观点条目: %d 条' % len(items))
-    print('  原文行: %d 行（关键句 %d 行，勘误 %d 行）' % (n_line, n_key, n_fix))
+    print('  原文行: %d 行（关键句 %d 行）' % (n_line, n_key))
     print('  出处条目: %d 条' % n_src)
     print('  文件大小: %.1f KB' % (os.path.getsize(OUT_HTML) / 1024.0))
     return 0

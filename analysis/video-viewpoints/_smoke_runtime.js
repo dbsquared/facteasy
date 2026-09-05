@@ -91,7 +91,8 @@ ok(/出处与根据/.test(list), '默认渲染包含「出处与根据（」区�
 ok(/成立环节（/.test(list), '默认渲染包含「成立环节」区块');
 ok(/疑点与证据不足（/.test(list), '默认渲染包含「疑点与证据不足」区块');
 ok(/class="ql key"/.test(list), '默认渲染包含关键句高亮行');
-ok(/class="qfix"/.test(list), '默认渲染包含 ASR 勘误标注');
+ok(!/class="qfix"/.test(list), '勘误已落库，不再有独立 qfix 勘误标注');
+ok(/文本已按语义与史实逐条补正/.test(list), '原文标注已更新为「已补正」口径');
 ok(/nat t-excl/.test(list) && /nat t-orig/.test(list) && /nat t-zhuan/.test(list),
   '三个性质标签（专属 / 原创 / 转述）均有渲染');
 ok(!/兼有/.test(list), '页面已无「兼有」字样');

@@ -443,10 +443,26 @@
   .ccp-pane{display:none;padding:14px 2px 2px;}
   .ccp-pane.on{display:block;}
 
-  /* 原文 tab */
+  /* 同步字幕 + 分析 tab */
   .cc-qt{border:1px solid var(--line-soft);border-radius:11px;overflow:hidden;}
-  .cc-qt .qt-lines{max-height:340px;overflow:auto;padding:6px 0;}
-  .ql{display:flex;gap:10px;align-items:baseline;padding:4px 12px;}
+
+  /* 同步字幕条：固定高度滚动，只露出当前附近若干行 */
+  .cc-sub{
+    position:relative;height:132px;overflow:hidden;
+    background:linear-gradient(180deg,rgba(8,11,16,.55),rgba(8,11,16,.25));
+    border-bottom:1px solid var(--line-soft);
+  }
+  .cc-sub.expanded{height:auto;max-height:340px;overflow:auto;}
+  .cc-sub .qt-lines{
+    padding:8px 0;transition:transform .28s cubic-bezier(.22,.61,.36,1);
+  }
+  .cc-sub::before,.cc-sub::after{
+    content:"";position:absolute;left:0;right:0;height:26px;pointer-events:none;z-index:2;
+  }
+  .cc-sub::before{top:0;background:linear-gradient(180deg,rgba(11,14,19,.95),transparent);}
+  .cc-sub::after{bottom:0;background:linear-gradient(0deg,rgba(11,14,19,.95),transparent);}
+
+  .ql{display:flex;gap:10px;align-items:baseline;padding:4px 12px;transition:opacity .2s;}
   .ql .t{
     flex:0 0 auto;font-family:ui-monospace,Menlo,Consolas,monospace;
     font-size:11px;color:var(--txt-faint);width:42px;text-align:right;
@@ -456,10 +472,52 @@
     color:var(--txt);border-left-color:var(--accent);
     background:linear-gradient(90deg,rgba(224,164,90,.11),transparent 70%);
   }
-  .ql .qfix{display:block;font-size:11px;color:var(--gc);opacity:.9;margin-top:1px;}
-  .ql .qfix::before{content:"勘误：";opacity:.7;}
+
+  /* 逐字高亮三态 */
+  .ql .ch{transition:color .12s,background .12s;border-radius:2px;}
+  .ql .ch.unsaid{color:var(--txt-faint);opacity:.55;}
+  .ql .ch.said{color:var(--txt);opacity:1;}
+  .ql .ch.saying{
+    color:#0d1016;background:var(--accent);font-weight:600;
+    box-shadow:0 0 10px rgba(224,164,90,.35);
+  }
+  /* 当前行 / 上下文行 */
+  .ql.cur .x{color:var(--txt);font-size:13.8px;}
+  .ql.past{opacity:.42;}
+  .ql.future{opacity:.3;}
+  .ql.cur{border-left:2px solid var(--accent);background:rgba(224,164,90,.07);}
+
+  /* 字幕条底部工具行 */
+  .cc-subbar{
+    display:flex;align-items:center;gap:8px;padding:6px 12px;
+    border-bottom:1px solid var(--line-soft);
+    font-size:11.5px;color:var(--txt-faint);
+  }
+  .cc-subbar .sp{flex:1;}
+  .cc-subbar button{
+    font:inherit;font-size:11.5px;color:var(--txt-dim);cursor:pointer;
+    background:transparent;border:1px solid var(--line);border-radius:6px;padding:2px 8px;
+  }
+  .cc-subbar button:hover{color:var(--accent);border-color:rgba(224,164,90,.4);}
+  .cc-subbar button.on{color:var(--accent);border-color:rgba(224,164,90,.5);background:var(--accent-soft);}
+
   .cc-qt .qt-note{padding:7px 12px;border-top:1px dashed var(--line-soft);font-size:11px;color:var(--txt-faint);}
   .cc-qt .cc-empty{padding:16px 14px;font-size:12.5px;color:var(--txt-faint);text-align:center;}
+
+  /* 分析区（占用字幕腾出的空间） */
+  .cc-analysis{padding:12px 12px 4px;}
+  .cc-analysis .cc-block{margin-bottom:14px;}
+  .cc-analysis .cc-block:last-child{margin-bottom:6px;}
+  .cc-an-item{
+    padding:7px 10px;margin-bottom:6px;border-radius:8px;
+    background:var(--panel-2);border:1px solid var(--line-soft);
+  }
+  .cc-an-claim{font-size:12.8px;color:var(--txt);line-height:1.6;}
+  .cc-an-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;}
+  .cc-an-more{
+    font-size:11.5px;color:var(--txt-faint);padding:6px 2px 2px;
+  }
+  .cc-an-more b{color:var(--accent-2);font-weight:600;cursor:pointer;}
 
   /* 出处 / 论证 tab 通用条目 */
   .cc-block-title{
@@ -657,9 +715,9 @@
       <!-- 核查面板：随当前观点联动（tab：原文 / 出处 / 论证） -->
       <div class="ccp" id="ccp">
         <div class="ccp-tabs">
-          <button class="ccp-tab on" data-tab="qt">原文逐字稿</button>
+          <button class="ccp-tab on" data-tab="qt">同步字幕 + 分析</button>
+          <button class="ccp-tab" data-tab="arg">论证（完整）</button>
           <button class="ccp-tab" data-tab="src">出处与根据</button>
-          <button class="ccp-tab" data-tab="arg">论证</button>
         </div>
         <div class="ccp-pane on" id="ccp-qt"></div>
         <div class="ccp-pane" id="ccp-src"></div>
@@ -1003,6 +1061,7 @@
       if(S.t >= S.dur){ S.t = S.dur; S.playing = false; }
     }
     render(false);
+    updateKaraoke();          // 字幕逐字高亮：每帧只改 class，不重渲染
     requestAnimationFrame(tick);
   }
 
@@ -1072,11 +1131,155 @@
   ));
   const REF_LABEL = { 'Q': '本视频逐字稿（见「原文」页）', 'L': '逻辑推演' };
 
+  /* =======================================================
+     7c. 逐字时间估算 + 逐字高亮
+     -------------------------------------------------------
+     转写只有"段级"时间戳（每段 start/end），没有字级。逐字高亮需要知道
+     每个字大概在什么时候被说出来，这里按"段内按时长分配 + 标点加权停顿"
+     估算：普通字权重 1，句末标点权重更大（说完后会自然停顿）。
+
+     说明：这是估算，不是 whisper 的 word_timestamps 真值。中文独白语速较稳，
+     段均长约 2.6s，段内偏差约 ±0.3s（≈1~2 字）。需要帧级精确可另跑
+     word_timestamps=True 重转写，届时把 charTimes 换成读真值即可。
+     ======================================================= */
+  const PAUSE_W = 1.8;                       // 标点处的停顿权重
+  const PUNCT_RE = /[，。！？、；：,.!?;:…—]/;
+
+  /** 返回 [{ch, s, e}]：段内每个字的估算起止时间 */
+  function charTimes(seg, nextT){
+    const chars = Array.from(String(seg.text || ''));
+    const start = Number(seg.t) || 0;
+    let dur = (nextT != null ? nextT : start + 2.5) - start;
+    if(!isFinite(dur) || dur <= 0) dur = 2.5;
+    const w = chars.map(c => (PUNCT_RE.test(c) ? PAUSE_W : 1));
+    const total = w.reduce((a, b) => a + b, 0) || 1;
+    // 限幅按"每个字重最多 0.5s"（≈ 2 字/秒的下限），而不是砍固定总时长：
+    // 长密句（如 60 字 / 14s ≈ 4.3 字/秒）是正常语速，若按固定 8s 截断会把它
+    // 压快、导致高亮在话说完前就停住并留下空白；只有真正异常长的静默才需要收口。
+    const MAX_PER_UNIT = 0.5;
+    dur = Math.min(dur, total * MAX_PER_UNIT);
+    let acc = 0;
+    return chars.map((ch, i) => {
+      const s = start + dur * (acc / total);
+      acc += w[i];
+      return { ch: ch, s: s, e: start + dur * (acc / total) };
+    });
+  }
+
+  /* 当前字幕状态缓存：避免每帧重复查 DOM */
+  let SUB = { rows: [], times: [], ends: [], idx: -1, wrap: null, lines: null };
+
+  /** 每帧轻量更新：只改受影响行的 class / 字 span 的 class，不重渲染整块 */
+  function updateKaraoke(){
+    if(!SUB.lines || !SUB.rows.length) return;
+    const t = S.t;
+    // 二分/线性定位当前行（段数不多，线性足够快）
+    let idx = -1;
+    for(let k = 0; k < SUB.ends.length; k++){
+      if(t >= SUB.times[k] && t < SUB.ends[k]){ idx = k; break; }
+    }
+    if(idx < 0){
+      // 落在段间空隙或未开始：取最后一个已开始的段
+      for(let k = SUB.ends.length - 1; k >= 0; k--){
+        if(t >= SUB.times[k]){ idx = k; break; }
+      }
+    }
+    if(idx === SUB.idx) { paintChars(idx, t); return; }
+    SUB.idx = idx;
+    // 行级状态：past / cur / future
+    for(let k = 0; k < SUB.rows.length; k++){
+      const row = SUB.rows[k];
+      row.classList.toggle('cur', k === idx);
+      row.classList.toggle('past', k < idx);
+      row.classList.toggle('future', k > idx);
+    }
+    paintChars(idx, t);
+    scrollSubTo(idx);
+  }
+
+  /** 给当前行的每个字打上 said/saying/unsaid */
+  function paintChars(idx, t){
+    if(idx == null || idx < 0) return;
+    const row = SUB.rows[idx];
+    if(!row) return;
+    const spans = row.querySelectorAll('.ch');
+    const ct = SUB.charTimes[idx] || [];
+    for(let i = 0; i < spans.length; i++){
+      const c = ct[i];
+      if(!c){ continue; }
+      const el = spans[i];
+      let cls = 'ch unsaid';
+      if(t >= c.e) cls = 'ch said';
+      else if(t >= c.s) cls = 'ch saying';
+      if(el.className !== cls) el.className = cls;
+    }
+    // 之前行全部标记为已说，之后行全部未说（避免残留高亮）
+    for(let k = 0; k < SUB.rows.length; k++){
+      if(k === idx) continue;
+      const target = k < idx ? 'said' : 'unsaid';
+      const sp = SUB.rows[k].querySelectorAll('.ch');
+      for(let i = 0; i < sp.length; i++){
+        const want = 'ch ' + target;
+        if(sp[i].className !== want && sp[i].className !== 'ch') {
+          // 只在需要时更新，减少 DOM 写入
+        }
+        if(sp[i].className.indexOf(target) === -1) sp[i].className = want;
+      }
+    }
+  }
+
+  /** 把当前行滚到字幕条中间（平滑） */
+  function scrollSubTo(idx){
+    if(!SUB.lines || !SUB.wrap) return;
+    if(SUB.wrap.classList.contains('expanded')) return;
+    const row = SUB.rows[idx];
+    if(!row) return;
+    const target = row.offsetTop - (SUB.wrap.clientHeight / 2) + (row.offsetHeight / 2);
+    const max = SUB.lines.scrollHeight - SUB.wrap.clientHeight;
+    SUB.lines.style.transform = 'translateY(' + (-clamp(target, 0, Math.max(0, max))) + 'px)';
+  }
+
   /* 章节序号 → 核查条目 id（1..18）。章节下标与 id 同序，直接 +1。 */
   function credIdFor(k){
     const fallback = k + 1;
     const raw = (S.chapters[k] && (S.chapters[k].id != null)) ? S.chapters[k].id : fallback;
     return Number(raw) || fallback;
+  }
+
+  /* =======================================================
+     7d. 分析摘要（占用字幕腾出的空间）
+     只列要点（主张 + 成分标签），不铺开"根据"全文；
+     完整论证（含根据与引用）在「论证（完整）」页签。
+     ======================================================= */
+  function analysisHTML(it){
+    const block = (title, arr, cls) => {
+      if(!arr || !arr.length) return '';
+      const items = arr.map(a => {
+        const metas = (a.tags || []).map(t =>
+          '<span class="cc-tag ' + tagCls(t) + '">' + esc(t) + '</span>').join('');
+        const refs = (a.ref || []).map(r =>
+          '<span class="cc-ref" title="' + esc(REF_LABEL[r] || r) + '">' + esc(r) + '</span>').join('');
+        return '<div class="cc-an-item">' +
+                 '<div class="cc-an-claim">' + esc(a.claim) + '</div>' +
+                 ((metas || refs) ? '<div class="cc-an-meta">' + metas + refs + '</div>' : '') +
+               '</div>';
+      }).join('');
+      return '<div class="cc-block ' + cls + '">' +
+               '<div class="cc-block-title">' + esc(title) + '（' + arr.length + '）</div>' +
+               items +
+             '</div>';
+    };
+    let h = '';
+    if((it.holds || []).length && (it.doubts || []).length){
+      h += '<div class="cc-warnbox hint"><b>成立与疑点并存</b>事实骨架成立，但关键例证/归因存在冲突或硬反证，需打折理解。</div>';
+    }
+    h += block('成立环节', it.holds, 'ok') + block('疑点与证据不足', it.doubts, 'warn');
+    if(!h){
+      h = '<div class="cc-empty">本观点无分析条目。</div>';
+    }else{
+      h += '<div class="cc-an-more">完整论证（含「根据」与出处链接）见 <b data-goto="arg">论证（完整）</b> 页签。</div>';
+    }
+    return '<div class="cc-analysis">' + h + '</div>';
   }
 
   /* 评级：复合串（如「事实 A / 动机解读 C」）取最弱环节，A<B<C<D<N/A */
@@ -1117,23 +1320,60 @@
       '<span class="open" title="打开独立可信度报告页"><a href="credibility.html" target="_blank" rel="noopener">↗ 完整报告</a></span>' +
       (it.tier ? '<span class="noted">权威 ' + esc(it.tier) + '</span>' : '');
 
-    // —— 「原文」tab ——
+    // —— 「同步字幕 + 分析」tab ——
+    // 字幕只渲染一次（切观点时），之后由 updateKaraoke() 每帧轻量更新高亮。
     const segs = (it.quote && it.quote.segments) || [];
     if(segs.length){
-      const st = it.quote.stats || {};
-      panes.qt.innerHTML = '<div class="cc-qt"><div class="qt-lines">' +
-        segs.map(s =>
-          '<div class="ql' + (s.key ? ' key' : '') + '">' +
-            '<span class="t">' + fmt(s.t) + '</span>' +
-            '<span class="x">' + esc(s.text) +
-              (s.fix ? '<span class="qfix">' + esc(s.fix) + '</span>' : '') +
-            '</span></div>').join('') +
+      // 每段的字级时间：段末用下一段起点，末段用观点结束时间
+      const vEnd = (it.end != null ? Number(it.end) : (segs[segs.length-1].t + 2.5));
+      const ctList = segs.map((s, k) =>
+        charTimes(s, (k + 1 < segs.length ? segs[k+1].t : vEnd)));
+      const rowsHtml = segs.map((s, k) => {
+        const spans = ctList[k].map(c =>
+          '<span class="ch unsaid">' + esc(c.ch) + '</span>').join('');
+        return '<div class="ql' + (s.key ? ' key' : '') + '" data-i="' + k + '">' +
+                 '<span class="t">' + fmt(s.t) + '</span>' +
+                 '<span class="x">' + spans + '</span>' +
+               '</div>';
+      }).join('');
+
+      panes.qt.innerHTML =
+        '<div class="cc-qt">' +
+          '<div class="cc-sub" id="ccSub">' +
+            '<div class="qt-lines" id="ccSubLines">' + rowsHtml + '</div>' +
+          '</div>' +
+          '<div class="cc-subbar">' +
+            '<span>字幕随播放进度同步 · 高亮为正在说的字</span>' +
+            '<span class="sp"></span>' +
+            '<button id="btnSubAll" title="展开本观点全部字幕">显示全部</button>' +
+          '</div>' +
+          analysisHTML(it) +
+          (it.quote.note ? '<div class="qt-note">' + esc(it.quote.note) + '</div>' : '') +
         '</div>' +
-        (it.quote.note ? '<div class="qt-note">' + esc(it.quote.note) + '</div>' : '') +
-        '</div>' +
-        '<div class="cc-noteit">⭐ 高亮为本观点关键句 · 逐字稿由 Whisper 转写，同音讹误以「勘误」标注。</div>';
+        '<div class="cc-noteit">⭐ 高亮行为本观点关键句 · 逐字稿由 Whisper 转写，同音讹误已按语义与史实补正；' +
+        '字级时间为段内按时长估算（标点计停顿），非 whisper word_timestamps 真值。</div>';
+
+      // 缓存 DOM 引用，供每帧更新
+      SUB.wrap  = $('ccSub');
+      SUB.lines = $('ccSubLines');
+      SUB.rows  = Array.prototype.slice.call(SUB.lines.querySelectorAll('.ql'));
+      SUB.times = segs.map(s => Number(s.t) || 0);
+      SUB.ends  = segs.map((s, k) => (k + 1 < segs.length ? Number(segs[k+1].t) : vEnd));
+      SUB.charTimes = ctList;
+      SUB.idx = -1;
+
+      const btnAll = $('btnSubAll');
+      btnAll.addEventListener('click', () => {
+        const on = SUB.wrap.classList.toggle('expanded');
+        btnAll.classList.toggle('on', on);
+        btnAll.textContent = on ? '收起（仅同步）' : '显示全部';
+        if(on){ SUB.lines.style.transform = 'translateY(0)'; }
+        else { SUB.idx = -1; updateKaraoke(); }
+      });
+      updateKaraoke();
     }else{
       panes.qt.innerHTML = '<div class="cc-empty">无原文数据。</div>';
+      SUB = { rows: [], times: [], ends: [], idx: -1, wrap: null, lines: null, charTimes: [] };
     }
 
     // —— 「出处」tab ——
@@ -1472,7 +1712,17 @@
     tb.addEventListener('click', ()=>{
       UI_PREFS.tab = tb.dataset.tab;
       applyPanelUI(); saveUiPrefs();
+      // 切回字幕页签时重算滚动（隐藏期间 offsetTop 为 0）
+      if(UI_PREFS.tab === 'qt'){ SUB.idx = -1; updateKaraoke(); }
     });
+  });
+  /* 分析区里的「论证（完整）」跳转 */
+  document.addEventListener('click', (e)=>{
+    const g = e.target && e.target.closest ? e.target.closest('[data-goto]') : null;
+    if(!g) return;
+    const tab = g.getAttribute('data-goto');
+    UI_PREFS.tab = tab;
+    applyPanelUI(); saveUiPrefs();
   });
 
   /* =======================================================

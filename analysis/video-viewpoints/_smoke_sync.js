@@ -189,6 +189,30 @@ log(credRow.indexOf('评级') !== -1, '核查行含「评级」');
 log(/nat(-t|-x|-o)?/.test(credRow) && credRow.indexOf('转述') !== -1 === false || true, '核查行渲染完成');
 log(credRow.length > 20, '核查行有内容（' + credRow.length + ' 字符）');
 log(qtHtml.length > 20, '原文 tab 已填充（' + qtHtml.length + ' 字符）');
+
+/* ---------- 同步字幕 + 分析（不再一次列出全部原文） ---------- */
+log(qtHtml.indexOf('id="ccSub"') !== -1, '同步字幕容器 #ccSub 存在');
+log(qtHtml.indexOf('cc-sub') !== -1, '字幕条使用固定高度同步容器（非铺开全文）');
+log(/class="ch unsaid"/.test(qtHtml), '每行已按字切分为 span.ch（供逐字高亮）');
+log(qtHtml.indexOf('btnSubAll') !== -1, '提供「显示全部」开关（可回看完整原文）');
+log(qtHtml.indexOf('cc-analysis') !== -1, '字幕下方为分析区（占用腾出的空间）');
+log(/cc-an-claim/.test(qtHtml), '分析区渲染了要点条目');
+log(qtHtml.indexOf('data-goto="arg"') !== -1, '分析区提供跳转「论证（完整）」入口');
+// 逐字高亮三态 class 必须都在 CSS 里有定义，否则高亮不可见
+const cssAll = html.slice(0, html.indexOf('</style>') > 0 ? html.indexOf('</style>') : 0);
+['.ql .ch.said', '.ql .ch.saying', '.ql .ch.unsaid'].forEach(sel => {
+  log(html.indexOf(sel) !== -1, 'CSS 定义了 ' + sel);
+});
+log(html.indexOf('.ql.cur') !== -1 && html.indexOf('.cc-subbar') !== -1,
+    'CSS 定义了当前行与字幕工具条');
+// 估算函数存在性（防止改坏）
+log(/function charTimes/.test(html) && /function updateKaraoke/.test(html) &&
+    /function paintChars/.test(html), '逐字时间估算与高亮函数齐全');
+log(/updateKaraoke\(\);\s*\n\s*requestAnimationFrame/.test(html) ||
+    /updateKaraoke\(\);[\s\S]{0,40}requestAnimationFrame/.test(html),
+    'tick 循环每帧调用 updateKaraoke');
+// 分析不应把完整"根据"塞进同步页签（那会重占空间）
+log(!/class="abas"/.test(qtHtml), '同步页签不含完整「根据」全文（留给论证页签）');
 const cred0 = (sandbox.window.FACTEASY_DATA && sandbox.window.FACTEASY_DATA.credibility.items[0]) || {};
 log(cred0.rating === 'A-', '默认观点 rating = A-（实际 ' + cred0.rating + '）');
 
