@@ -72,9 +72,33 @@ python build_credibility_md.py   # → ./credibility.md
 
 同步阅读器与可信度报告两页共用这一份数据，因此改一次两边同时生效。
 
+## 本地 H5 播放器（接入 B 站真实信号源）
+
+`pages/sync-player.html` 用 B 站官方 iframe，但 iframe 跨域、**不向父页报告播放进度**，导致字幕会漂移——暂停或缓冲时文本仍往前走。`pages/h5-player.html` 改用**原生 `<video>` + dash.js** 直接播放 B 站的 DASH 流，拿到真实的 `currentTime` / `pause` / `waiting` 事件，字幕逐字高亮与核查面板完全由播放进度驱动，不再各自计时。
+
+B 站播放流有跨域 + CDN Referer 限制，浏览器无法直接拉，需要一个本地代理中转：
+
+```bash
+cd analysis/video-viewpoints
+node bili_h5_proxy.js            # 默认端口 8124，无外部依赖
+# 然后用浏览器打开 http://127.0.0.1:8124/
+```
+
+代理做的事：① 用 WBI 签名请求 `/x/player/wbi/playurl`；② 把 DASH 里的 `baseUrl` / `backupUrl`
+改写成同源的 `/seg?u=<真实地址>`；③ 透传分片（带 `Range`）并补 `Referer` / `UA`；④ 在同一端口托管
+`h5-player.html` 与 `facteasy-data.js`。代理只中转流地址、不下载整段视频，本地不落盘。
+
+页面内：默认 **480P（游客，无需登录）**；在「SESSDATA」框粘贴浏览器 Cookie 里的 `SESSDATA` 可解锁
+720P / 1080P；大会员可到 1080P+。选好清晰度后点「加载播放器」即开始播放。换视频改 `loadPlayer()` 里的
+`bvid` / `cid` 即可（或给 URL 加 `?bvid=...&cid=...`）。
+
+> 注意：`pages/h5-player.html` 必须经代理访问，不能直接 `file://` 双击——它会请求同源的
+> `/playurl` 与 `/seg`，这些只在代理进程里存在。
+
 ## 已知限制
 
 - **B 站播放器依赖 iframe 嵌入**：`pages/sync-player.html` 通过 iframe 加载 B 站官方播放器。部分内嵌预览环境（如某些 IDE 的静态预览面板）会拦截外部 iframe，此时页面会给出「在新标签页打开」与「无视频计时」两种兜底方式。
 - **页面内的观点时间戳**：当前视频的 18 个观点时间戳由音频转写 + 语义切分得到，存放于 `analysis/video-viewpoints/viewpoints.json`，经 `build_site_data.py` 生成进 `pages/facteasy-data.js` 供页面读取。
 - **核查面板的进度驱动**：同步阅读器的核查面板跟随页面内的本地时钟切换观点。B 站 iframe 为跨域，无法直接读取播放器进度，因此若用户手动拖动视频进度条，页面会尝试重新定位，但极端网络下可能有 1–2 秒误差。
 - **B 站播放器为懒加载**：`pages/sync-player.html` 打开时**不加载**播放器，需点击「加载 B 站播放器」。这样在会拦截外部 iframe 的环境（部分 IDE 预览面板 / 沙箱）里不会一进来就显示 `This content is blocked`。右侧的观点切分与事实核查不依赖播放器，不加载也能用。已实测 `player.bilibili.com` 响应头**不含** `X-Frame-Options` 与 CSP `frame-ancestors`——B 站官方外链播放器本身不限制嵌入，报错均来自宿主环境。
+- **iframe 进度不可读导致字幕漂移**：`sync-player.html` 的 iframe 跨域、不向父页报告进度，暂停 / 缓冲时文本仍按本地时钟前进（已用「接管层 + 20s 严格心跳」把误差压到可接受范围）。若要**逐帧精确、暂停即停**，请用 `pages/h5-player.html` + 本地代理 `bili_h5_proxy.js`——原生 `<video>` 直连 B 站 DASH 流，进度完全可控（见上节）。
